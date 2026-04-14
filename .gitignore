@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Runtime artifacts
+intrusos/
+registro_accesos.csv
+
+# Personal/private biometric assets (DO NOT COMMIT)
+foto_referencia.png
+services/face/foto_referencia.png
+data/foto_referencia.png
+
+# Legacy root UI file (keep local if needed, but not in repo)
+faceaccess.html
+
+# Docker local state
+*.log
