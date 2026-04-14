@@ -60,7 +60,7 @@ services:
     volumes:
       - ./services/face/app.py:/app/app.py
       - ./services/face/faceaccess.html:/app/faceaccess.html
-      - ./data/foto_referencia.png:/app/data/foto_referencia.png
+      - ./data:/app/data
       - ./registro_accesos.csv:/app/registro_accesos.csv
       - ./intrusos:/app/intrusos
       - /dev:/dev

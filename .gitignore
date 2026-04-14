@@ -21,7 +21,8 @@ services/face/foto_referencia.png
 data/foto_referencia.png
 
 # Legacy root UI file (keep local if needed, but not in repo)
-faceaccess.html
+/faceaccess.html
+!services/face/faceaccess.html
 
 # Docker local state
 *.log

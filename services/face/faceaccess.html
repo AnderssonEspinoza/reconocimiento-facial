@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FaceAccess — Sistema de Reconocimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d13;
+    --surface: #11151d;
+    --surface-soft: #171d27;
+    --border: #2b3445;
+    --green: #53f0ff;
+    --green-dim: #53f0ff22;
+    --red: #ff4f7a;
+    --red-dim: #ff4f7a22;
+    --amber: #ffb957;
+    --amber-dim: #ffb95722;
+    --blue: #7ea8ff;
+    --text: #d8e1ee;
+    --text-dim: #7c899f;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Orbitron', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background:
+      radial-gradient(circle at 20% 10%, #1a2433 0%, transparent 40%),
+      radial-gradient(circle at 80% 90%, #172130 0%, transparent 35%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(#1e273433 1px, transparent 1px),
+      linear-gradient(90deg, #1e273433 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.45;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #e7efff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    border: 2px solid var(--green);
+    border-radius: 6px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 10px var(--green-dim);
+  }
+  .logo-icon::after {
+    content: '';
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  .sys-time {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: #0f141d;
+  }
+  .status-pill.online { border-color: var(--green); color: var(--green); }
+  .status-pill.offline { border-color: var(--red); color: var(--red); }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* MAIN */
+  main {
+    padding: 32px 0;
+    display: grid;
+    grid-template-columns: minmax(500px, 620px) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* PANEL base */
+  .panel {
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-soft) 100%);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 8px 18px #03060b55, inset 0 0 0 1px #ffffff05;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .panel-tag {
+    font-size: 0.6rem;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: #0f1622;
+    color: #93a6c3;
+    border: 1px solid #334055;
+  }
+
+  /* CAMERA panel */
+  .camera-feed {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/10;
+    background: #03060a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .camera-stream {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.92;
+    filter: grayscale(1) contrast(1.18) brightness(0.8);
+  }
+
+  .camera-idle {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-dim);
+    z-index: 3;
+  }
+  .camera-idle.active { display: flex; }
+
+  .face-outline {
+    width: 80px; height: 96px;
+    border: 2px solid var(--text-dim);
+    border-radius: 50% 50% 40% 40%;
+    position: relative;
+    opacity: 0.4;
+  }
+  .face-outline::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 50%; transform: translateX(-50%);
+    width: 50px; height: 20px;
+    border: 2px solid var(--text-dim);
+    border-top: none;
+    border-radius: 0 0 30px 30px;
+  }
+
+  /* Scanning animation overlay */
+  .scan-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .scan-overlay.active { display: flex; }
+
+  .scan-box {
+    width: 180px; height: 220px;
+    position: relative;
+  }
+  .scan-box::before, .scan-box::after,
+  .scan-box span::before, .scan-box span::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+  }
+  .scan-box::before { top: 0; left: 0; border-top: 2px solid var(--green); border-left: 2px solid var(--green); }
+  .scan-box::after { top: 0; right: 0; border-top: 2px solid var(--green); border-right: 2px solid var(--green); }
+  .scan-box span::before { bottom: 0; left: 0; border-bottom: 2px solid var(--green); border-left: 2px solid var(--green); }
+  .scan-box span::after { bottom: 0; right: 0; border-bottom: 2px solid var(--green); border-right: 2px solid var(--green); }
+
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #89f7ff, transparent);
+    animation: scan-move 1.2s linear infinite;
+    box-shadow: 0 0 10px var(--green);
+  }
+  @keyframes scan-move {
+    0% { top: 0; }
+    100% { top: 100%; }
+  }
+
+  .scan-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Detected overlay */
+  .detected-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #00ff9d08;
+  }
+  .detected-overlay.active { display: flex; }
+
+  .detected-face-box {
+    width: 120px; height: 140px;
+    border: 2px solid var(--green);
+    box-shadow: 0 0 20px var(--green-dim), inset 0 0 20px var(--green-dim);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .detected-face-box::before {
+    content: '✓';
+    font-size: 2.5rem;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green);
+  }
+
+  /* DENIED overlay */
+  .denied-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #ff3c5a08;
+  }
+  .denied-overlay.active { display: flex; }
+  .denied-box {
+    width: 120px; height: 140px;
+    border: 2px solid var(--red);
+    box-shadow: 0 0 20px var(--red-dim), inset 0 0 20px var(--red-dim);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .denied-box::before {
+    content: '✕';
+    font-size: 2.5rem;
+    color: var(--red);
+    text-shadow: 0 0 20px var(--red);
+  }
+
+  .camera-info {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+  }
+
+  /* CONTROLS */
+  .controls {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #0d131d;
+  }
+  .btn:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .btn.danger:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+  .btn .btn-icon { font-size: 1rem; }
+  .btn:disabled { opacity: 0.3; pointer-events: none; }
+
+  /* RIGHT COLUMN */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* USER CARD */
+  .user-card {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 80px;
+    transition: all 0.3s;
+  }
+
+  .user-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    transition: border-color 0.3s;
+  }
+  .user-avatar.granted { border-color: var(--green); box-shadow: 0 0 12px var(--green-dim); }
+  .user-avatar.denied { border-color: var(--red); box-shadow: 0 0 12px var(--red-dim); }
+
+  .user-info { flex: 1; }
+  .user-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .user-meta { font-size: 0.7rem; color: var(--text-dim); }
+  .user-idle { font-size: 0.75rem; color: var(--text-dim); }
+
+  .access-badge {
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .access-badge.granted { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .access-badge.denied { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .access-badge.idle { background: var(--border); color: var(--text-dim); border: 1px solid var(--border); }
+
+  /* ARDUINO PANEL */
+  .arduino-panel {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .arduino-display {
+    flex: 1;
+    background: #000;
+    border: 1px solid #1a2a1a;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arduino-display::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(transparent 50%, rgba(0,255,50,0.03) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+  }
+
+  .arduino-text {
+    color: #00cc44;
+    text-shadow: 0 0 8px #00cc44;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+
+  .arduino-cursor {
+    display: inline-block;
+    width: 8px; height: 1em;
+    background: #00cc44;
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+    vertical-align: middle;
+  }
+
+  .arduino-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .chip-icon {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    background: #0d1117;
+    position: relative;
+  }
+
+  .chip-led {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: all 0.3s;
+  }
+  .chip-led.on {
+    background: var(--amber);
+    box-shadow: 0 0 8px var(--amber);
+    animation: led-pulse 1s ease-in-out infinite;
+  }
+  @keyframes led-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--amber); }
+    50% { opacity: 0.7; box-shadow: 0 0 4px var(--amber); }
+  }
+
+  /* PLEX PANEL */
+  .plex-section { }
+  .plex-locked {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+  .lock-icon { font-size: 2.5rem; opacity: 0.3; }
+  .plex-locked p { font-size: 0.75rem; color: var(--text-dim); }
+
+  .plex-content {
+    display: none;
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .plex-content.visible { display: flex; }
+
+  .plex-url-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #050608;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    color: var(--blue);
+  }
+
+  .plex-media-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .media-card {
+    aspect-ratio: 2/3;
+    border-radius: 4px;
+    background: var(--border);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .media-card:hover { transform: scale(1.03); }
+  .media-card .media-bg {
+    position: absolute; inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+  }
+  .media-card .media-title {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 6px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+    font-size: 0.6rem;
+    color: #fff;
+    letter-spacing: 0.03em;
+  }
+
+  /* LOG */
+  .log-panel { }
+  .log-entries {
+    padding: 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-entries::-webkit-scrollbar { width: 3px; }
+  .log-entries::-webkit-scrollbar-track { background: transparent; }
+  .log-entries::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .log-entry {
+    font-size: 0.68rem;
+    display: flex;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    animation: log-in 0.2s ease;
+  }
+  @keyframes log-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
+  .log-time { color: var(--text-dim); flex-shrink: 0; }
+  .log-msg.ok { color: var(--green); }
+  .log-msg.err { color: var(--red); }
+  .log-msg.info { color: var(--blue); }
+  .log-msg.warn { color: var(--amber); }
+
+  /* REPORTES */
+  .metrics-grid {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .metric-card {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    background: #0e141e;
+  }
+
+  .metric-label {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .metric-value {
+    margin-top: 6px;
+    font-size: 1.2rem;
+    font-family: var(--sans);
+    color: #eef4ff;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .report-recent {
+    padding: 0 12px 12px;
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .report-row {
+    font-size: 0.66rem;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    padding: 4px 0;
+  }
+
+  .report-row .ok { color: var(--green); }
+  .report-row .err { color: var(--red); }
+
+  /* USERS REGISTER SECTION */
+  .register-row {
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-top: 1px solid var(--border);
+  }
+  .input-field {
+    flex: 1;
+    background: #050608;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .input-field:focus { border-color: var(--green); }
+  .input-field::placeholder { color: var(--text-dim); }
+
+  .btn-sm {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+  .users-list {
+    padding: 0 16px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 0.68rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .user-chip:hover { border-color: var(--amber); color: var(--amber); }
+  .user-chip span { font-size: 0.8rem; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-link { color: var(--text-dim); text-decoration: none; }
+  .footer-link:hover { color: var(--green); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+    .camera-feed { aspect-ratio: 4/3; }
+    .plex-media-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon"></div>
+      AVA SESSION
+    </div>
+    <div class="sys-time" id="sys-time">--:--:--</div>
+    <div class="status-pill offline" id="cam-status">
+      <div class="status-dot"></div>
+      <span id="cam-status-text">CÁMARA INACTIVA</span>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <!-- LEFT: CAMERA -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>Cámara — Entrada Principal</span>
+          <span class="panel-tag" id="cam-tag">IDLE</span>
+        </div>
+
+        <div class="camera-feed">
+          <img id="camera-stream" class="camera-stream" alt="Stream de cámara" src="/video_feed">
+
+          <!-- Idle state -->
+          <div class="camera-idle" id="state-idle">
+            <div class="face-outline"></div>
+            <span style="font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;margin-top:8px;">Esperando rostro...</span>
+          </div>
+
+          <!-- Scanning state -->
+          <div class="scan-overlay" id="state-scanning">
+            <div class="scan-box">
+              <span></span>
+              <div class="scan-line"></div>
+            </div>
+            <div class="scan-label">ANALIZANDO BIOMETRÍA...</div>
+          </div>
+
+          <!-- Detected state -->
+          <div class="detected-overlay" id="state-detected">
+            <div class="detected-face-box"></div>
+            <div class="scan-label" style="animation:none;">IDENTIDAD VERIFICADA</div>
+          </div>
+
+          <!-- Denied state -->
+          <div class="denied-overlay" id="state-denied">
+            <div class="denied-box"></div>
+            <div class="scan-label" style="color:var(--red);animation:none;">ACCESO DENEGADO</div>
+          </div>
+        </div>
+
+        <div class="camera-info">
+          <span id="cam-fps">FPS: --</span>
+          <span id="cam-res">RESOLUCIÓN: --</span>
+          <span id="cam-conf">CONFIANZA: --</span>
+        </div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>Control Center</span>
+          <span class="panel-tag">LIVE</span>
+        </div>
+        <div class="controls">
+          <button class="btn" id="btn-scan" onclick="startScan()">
+            <span class="btn-icon">◉</span> Iniciar Escaneo
+          </button>
+          <button class="btn" id="btn-mesh" onclick="toggleMesh()">
+            <span class="btn-icon">⌗</span> Malla: ON
+          </button>
+          <button class="btn" onclick="resetSystem()" style="border-color:var(--text-dim);">
+            <span class="btn-icon">↺</span> Resetear Sistema
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-col">
+
+      <!-- USER DETECTED -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>Usuario Detectado</span>
+          <span class="panel-tag" id="access-tag">ESPERANDO</span>
+        </div>
+        <div class="user-card" id="user-card">
+          <div class="user-avatar" id="user-avatar">👤</div>
+          <div class="user-idle">Sin identificación activa</div>
+        </div>
+      </div>
+
+      <!-- ARDUINO LCD -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>Arduino — LCD / LED</span>
+          <span class="panel-tag">SERIAL SIMULADO</span>
+        </div>
+        <div class="arduino-panel">
+          <div class="arduino-display">
+            <span class="arduino-text" id="arduino-text">Esperando...</span>
+            <span class="arduino-cursor"></span>
+          </div>
+          <div class="arduino-chip">
+            <div class="chip-icon">
+              🔌
+              <div class="chip-led" id="chip-led"></div>
+            </div>
+            <span>UNO R3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLEX -->
+      <div class="panel plex-section">
+        <div class="panel-header">
+          <span>Plex Media Server</span>
+          <span class="panel-tag" id="plex-tag">BLOQUEADO</span>
+        </div>
+
+        <div class="plex-locked" id="plex-locked">
+          <div class="lock-icon">🔒</div>
+          <p>Acceso restringido.<br>Se requiere verificación biométrica.</p>
+        </div>
+
+        <div class="plex-content" id="plex-content">
+          <div class="plex-url-bar">
+            <span>🌐</span>
+            <span>http://localhost:32400/web</span>
+          </div>
+          <div class="plex-media-grid" id="plex-grid"></div>
+        </div>
+      </div>
+
+      <!-- USERS REGISTRADOS -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>Usuarios Registrados</span>
+          <span class="panel-tag" id="users-count">0 usuarios</span>
+        </div>
+        <div class="users-list" id="users-list">
+          <span style="font-size:0.7rem;color:var(--text-dim);padding:4px 0;">No hay usuarios. Agrega uno abajo.</span>
+        </div>
+        <div class="register-row">
+          <input type="text" class="input-field" id="new-user-input" placeholder="Nombre del usuario..." maxlength="20">
+          <button class="btn-sm" onclick="addUser()">+ Agregar</button>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>Métricas DB</span>
+          <span class="panel-tag" id="db-status-tag">DB: --</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Total Eventos</div>
+            <div class="metric-value" id="m-total">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Concedidos</div>
+            <div class="metric-value" id="m-concedidos">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Denegados</div>
+            <div class="metric-value" id="m-denegados">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Hoy OK</div>
+            <div class="metric-value" id="m-hoy-ok">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Hoy Deneg</div>
+            <div class="metric-value" id="m-hoy-den">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Últimas 24h</div>
+            <div class="metric-value" id="m-24h">0</div>
+          </div>
+        </div>
+        <div class="report-recent" id="report-recent"></div>
+      </div>
+
+      <!-- LOG -->
+      <div class="panel log-panel">
+        <div class="panel-header">
+          <span>Log del Sistema</span>
+          <span class="panel-tag" id="log-count">0 eventos</span>
+        </div>
+        <div class="log-entries" id="log-entries">
+          <div class="log-entry">
+            <span class="log-time">--:--:--</span>
+            <span class="log-msg info">Sistema iniciado. Esperando actividad.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <span>FaceAccess v1.0 — Proyecto Académico</span>
+    <div class="footer-links">
+      <a class="footer-link" href="#">Python + OpenCV</a>
+      <a class="footer-link" href="#">face_recognition</a>
+      <a class="footer-link" href="#">Arduino UNO</a>
+      <a class="footer-link" href="#">Plex Media Server</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  const state = {
+    logs: [],
+    users: [],
+    status: null,
+    reportes: null,
+  };
+
+  async function api(path, options = {}) {
+    const res = await fetch(path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('sys-time').textContent = now.toTimeString().slice(0, 8);
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function setState(s) {
+    ['idle', 'scanning', 'detected', 'denied'].forEach(id => {
+      const el = document.getElementById('state-' + id);
+      if (el) el.classList.toggle('active', id === s);
+    });
+    document.getElementById('cam-tag').textContent = (s || 'idle').toUpperCase();
+  }
+
+  function setCameraFromStatus(status) {
+    const active = !!status.scan_active;
+    const pill = document.getElementById('cam-status');
+    const txt = document.getElementById('cam-status-text');
+
+    if (active) {
+      pill.className = 'status-pill online';
+      txt.textContent = 'CÁMARA ACTIVA';
+    } else {
+      pill.className = 'status-pill offline';
+      txt.textContent = 'CÁMARA INACTIVA';
+    }
+
+    document.getElementById('cam-fps').textContent = `FPS: ${status.fps ?? '--'}`;
+    document.getElementById('cam-res').textContent = `RESOLUCIÓN: ${status.resolution ?? '--'}`;
+    document.getElementById('cam-conf').textContent = status.confidence == null
+      ? 'CONFIANZA: --'
+      : `CONFIANZA: ${status.confidence.toFixed(1)}%`;
+  }
+
+  function setArduino(text, ledOn = false) {
+    document.getElementById('arduino-text').textContent = text || 'Esperando...';
+    document.getElementById('chip-led').classList.toggle('on', !!ledOn);
+  }
+
+  function renderUserCard(status) {
+    const card = document.getElementById('user-card');
+    const accessTag = document.getElementById('access-tag');
+
+    if (status.system_open && status.current_user) {
+      card.innerHTML = `
+        <div class="user-avatar granted">😊</div>
+        <div class="user-info">
+          <div class="user-name">${status.current_user}</div>
+          <div class="user-meta">Confianza: ${status.confidence?.toFixed?.(1) ?? status.confidence ?? '--'}% · ${new Date().toTimeString().slice(0,8)}</div>
+        </div>
+        <div class="access-badge granted">ACCESO OK</div>
+      `;
+      accessTag.textContent = 'CONCEDIDO';
+      return;
+    }
+
+    if (status.state === 'denied') {
+      card.innerHTML = `
+        <div class="user-avatar denied">❓</div>
+        <div class="user-info">
+          <div class="user-name" style="color:var(--red);">Desconocido</div>
+          <div class="user-meta">Intento no autorizado · ${new Date().toTimeString().slice(0,8)}</div>
+        </div>
+        <div class="access-badge denied">DENEGADO</div>
+      `;
+      accessTag.textContent = 'DENEGADO';
+      return;
+    }
+
+    if (status.state === 'scanning' && status.progress > 0) {
+      card.innerHTML = `
+        <div class="user-avatar">🧠</div>
+        <div class="user-info">
+          <div class="user-name">Analizando biometría</div>
+          <div class="user-meta">Progreso: ${status.progress}%</div>
+        </div>
+        <div class="access-badge idle">ESCANEANDO</div>
+      `;
+      accessTag.textContent = 'ANALIZANDO';
+      return;
+    }
+
+    card.innerHTML = `<div class="user-avatar">👤</div><div class="user-idle">Sin identificación activa</div>`;
+    accessTag.textContent = 'ESPERANDO';
+  }
+
+  function renderPlex(status) {
+    const locked = document.getElementById('plex-locked');
+    const content = document.getElementById('plex-content');
+    const tag = document.getElementById('plex-tag');
+
+    if (status.system_open) {
+      locked.style.display = 'none';
+      content.classList.add('visible');
+      tag.textContent = 'DESBLOQUEADO';
+      buildPlexGrid();
+    } else {
+      locked.style.display = 'flex';
+      content.classList.remove('visible');
+      tag.textContent = 'BLOQUEADO';
+    }
+  }
+
+  async function startScan() {
+    try {
+      await api('/api/start_scan', { method: 'POST' });
+      await refreshStatus();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function resetSystem() {
+    try {
+      await api('/api/reset', { method: 'POST' });
+      await refreshStatus();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function toggleMesh() {
+    try {
+      const current = !!(state.status && state.status.mesh_enabled);
+      const next = !current;
+      await api('/api/mesh', {
+        method: 'POST',
+        body: JSON.stringify({ enabled: next }),
+      });
+      await refreshStatus();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function renderLogs(logs) {
+    const container = document.getElementById('log-entries');
+    container.innerHTML = '';
+
+    if (!logs.length) {
+      container.innerHTML = `
+        <div class="log-entry">
+          <span class="log-time">--:--:--</span>
+          <span class="log-msg info">Sistema iniciado. Esperando actividad.</span>
+        </div>`;
+    } else {
+      logs.forEach(item => {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<span class="log-time">${item.time}</span><span class="log-msg ${item.type}">${item.msg}</span>`;
+        container.appendChild(entry);
+      });
+    }
+
+    document.getElementById('log-count').textContent = `${logs.length} eventos`;
+  }
+
+  async function refreshLogs() {
+    try {
+      const data = await api('/api/logs?limit=120');
+      state.logs = data.logs || [];
+      renderLogs(state.logs);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function renderUsers(users) {
+    const list = document.getElementById('users-list');
+    list.innerHTML = '';
+
+    if (!users.length) {
+      list.innerHTML = '<span style="font-size:0.7rem;color:var(--text-dim);padding:4px 0;">No hay usuarios.</span>';
+    } else {
+      users.forEach(name => {
+        const chip = document.createElement('div');
+        chip.className = 'user-chip';
+        chip.innerHTML = `<span>👤</span>${name} <span style="color:var(--red-dim);margin-left:4px;">✕</span>`;
+        chip.title = 'Click para eliminar';
+        chip.onclick = () => removeUser(name);
+        list.appendChild(chip);
+      });
+    }
+
+    document.getElementById('users-count').textContent = `${users.length} usuario${users.length !== 1 ? 's' : ''}`;
+  }
+
+  async function refreshUsers() {
+    try {
+      const data = await api('/api/users');
+      state.users = data.users || [];
+      renderUsers(state.users);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function renderReportes(report) {
+    document.getElementById('db-status-tag').textContent = report.db_connected ? 'DB: ONLINE' : 'DB: OFFLINE';
+    document.getElementById('m-total').textContent = report.total ?? 0;
+    document.getElementById('m-concedidos').textContent = report.concedidos ?? 0;
+    document.getElementById('m-denegados').textContent = report.denegados ?? 0;
+    document.getElementById('m-hoy-ok').textContent = report.hoy_concedidos ?? 0;
+    document.getElementById('m-hoy-den').textContent = report.hoy_denegados ?? 0;
+    document.getElementById('m-24h').textContent = report.ultimas_24h ?? 0;
+
+    const recent = document.getElementById('report-recent');
+    recent.innerHTML = '';
+
+    const rows = report.recent || [];
+    if (!rows.length) {
+      recent.innerHTML = '<div class="report-row"><span>--</span><span>Sin datos</span><span>--</span></div>';
+      return;
+    }
+
+    rows.forEach(r => {
+      const row = document.createElement('div');
+      const cls = r.evento === 'ACCESO_CONCEDIDO' ? 'ok' : 'err';
+      row.className = 'report-row';
+      row.innerHTML = `
+        <span>${r.fecha_hora.slice(11)}</span>
+        <span class="${cls}">${r.evento === 'ACCESO_CONCEDIDO' ? 'CONCEDIDO' : 'DENEGADO'}</span>
+        <span>${r.persona}</span>
+      `;
+      recent.appendChild(row);
+    });
+  }
+
+  async function refreshReportes() {
+    try {
+      const data = await api('/api/reportes');
+      state.reportes = data;
+      renderReportes(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function addUser() {
+    const input = document.getElementById('new-user-input');
+    const name = input.value.trim();
+    if (!name) return;
+
+    try {
+      await api('/api/users', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      input.value = '';
+      await Promise.all([refreshUsers(), refreshLogs()]);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    }
+  }
+
+  async function removeUser(name) {
+    try {
+      await api(`/api/users/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      await Promise.all([refreshUsers(), refreshLogs()]);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  document.getElementById('new-user-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addUser();
+  });
+
+  async function refreshStatus() {
+    try {
+      const status = await api('/api/status');
+      state.status = status;
+
+      setState(status.state || 'idle');
+      setCameraFromStatus(status);
+      setArduino(status.arduino_text, status.led_on);
+      renderUserCard(status);
+      renderPlex(status);
+
+      document.getElementById('btn-scan').disabled = !!status.scan_active;
+      const btnMesh = document.getElementById('btn-mesh');
+      if (btnMesh) {
+        const enabled = !!status.mesh_enabled;
+        btnMesh.innerHTML = `<span class=\"btn-icon\">⌗</span> Malla: ${enabled ? 'ON' : 'OFF'}`;
+      }
+    } catch (err) {
+      console.error(err);
+      setState('idle');
+    }
+  }
+
+  const plexMedia = [
+    { title: 'Inception', emoji: '🎬' },
+    { title: 'Breaking Bad', emoji: '📺' },
+    { title: 'Dune', emoji: '🏜️' },
+    { title: 'The Office', emoji: '😄' },
+    { title: 'Interstellar', emoji: '🚀' },
+    { title: 'Dark', emoji: '🌑' },
+    { title: 'Joker', emoji: '🃏' },
+    { title: 'Severance', emoji: '🏢' },
+  ];
+
+  function buildPlexGrid() {
+    const grid = document.getElementById('plex-grid');
+    if (grid.children.length > 0) return;
+    plexMedia.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'media-card';
+      card.innerHTML = `
+        <div class="media-bg">${m.emoji}</div>
+        <div class="media-title">${m.title}</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  async function init() {
+    document.getElementById('camera-stream').src = `/video_feed?ts=${Date.now()}`;
+    await Promise.all([refreshStatus(), refreshUsers(), refreshLogs(), refreshReportes()]);
+    setInterval(refreshStatus, 500);
+    setInterval(refreshLogs, 2000);
+    setInterval(refreshUsers, 4000);
+    setInterval(refreshReportes, 5000);
+  }
+
+  init();
+</script>
+</body>
+</html>

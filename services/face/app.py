@@ -33,6 +33,10 @@ COOLDOWN_CAPTURA_INTRUSO = 5
 PLEX_URL = os.getenv("PLEX_URL", "http://localhost:32400/web")
 DEVICE_SERVICE_URL = os.getenv("DEVICE_SERVICE_URL", "http://device-service:8001")
 DB_URL = os.getenv("DB_URL", "postgresql://faceaccess:faceaccess@postgres-service:5432/faceaccess")
+FRAME_SCALE = float(os.getenv("FRAME_SCALE", "0.22"))
+PROCESS_EVERY_N_FRAMES = int(os.getenv("PROCESS_EVERY_N_FRAMES", "2"))
+LANDMARK_EVERY_N_FRAMES = int(os.getenv("LANDMARK_EVERY_N_FRAMES", "3"))
+ENABLE_FACE_MESH = os.getenv("ENABLE_FACE_MESH", "1").strip().lower() not in {"0", "false", "no"}
 
 
 class DeviceServiceClient:
@@ -97,6 +101,11 @@ class FaceAccessEngine:
         self.logs = deque(maxlen=300)
         self.last_device_message = None
         self.db_connected = False
+        self.frame_index = 0
+        self.cached_face_locations = []
+        self.cached_face_encodings = []
+        self.cached_face_landmarks = []
+        self.enable_face_mesh = ENABLE_FACE_MESH
 
         self.device_client = DeviceServiceClient(DEVICE_SERVICE_URL)
 
@@ -118,6 +127,11 @@ class FaceAccessEngine:
     def _cargar_encoding_referencia(self):
         if not FOTO_REFERENCIA.exists():
             raise FileNotFoundError(f"No se encontro la imagen de referencia: {FOTO_REFERENCIA}")
+        if not FOTO_REFERENCIA.is_file():
+            raise RuntimeError(
+                f"La ruta de referencia no es un archivo valido: {FOTO_REFERENCIA}. "
+                "Asegura que exista data/foto_referencia.png"
+            )
         imagen_conocida = face_recognition.load_image_file(str(FOTO_REFERENCIA))
         encodings = face_recognition.face_encodings(imagen_conocida)
         if not encodings:
@@ -218,6 +232,7 @@ class FaceAccessEngine:
             self.historial_distancias.clear()
             self.estado_autorizado_estable = False
             self.last_device_message = None
+            self.cached_face_landmarks = []
             self._set_device_state("Esperando...", led_on=False, force_send=True)
             self._add_log("Camara iniciada. Buscando rostros...", "info")
 
@@ -236,8 +251,19 @@ class FaceAccessEngine:
             self.historial_distancias.clear()
             self.estado_autorizado_estable = False
             self.last_device_message = None
+            self.cached_face_landmarks = []
             self._set_device_state("Esperando...", led_on=False, force_send=True)
             self._add_log("Sistema reseteado.", "info")
+
+    def set_mesh_enabled(self, enabled):
+        with self.lock:
+            self.enable_face_mesh = bool(enabled)
+            if not self.enable_face_mesh:
+                self.cached_face_landmarks = []
+            self._add_log(
+                f"Malla facial {'activada' if self.enable_face_mesh else 'desactivada'}.",
+                "info",
+            )
 
     def add_user(self, name):
         cleaned = name.strip()
@@ -269,6 +295,41 @@ class FaceAccessEngine:
         ruta = CARPETA_INTRUSOS / f"intruso_{marca_tiempo}.jpg"
         cv2.imwrite(str(ruta), frame)
         return ruta
+
+    def _draw_face_mesh_overlay(self, frame, landmarks, scale_factor):
+        color_line = (255, 220, 120)
+        color_point = (255, 255, 255)
+
+        def scaled(points):
+            return [(int(x * scale_factor), int(y * scale_factor)) for (x, y) in points]
+
+        for feature_points in landmarks.values():
+            pts = scaled(feature_points)
+            if len(pts) < 2:
+                continue
+            for i in range(len(pts) - 1):
+                cv2.line(frame, pts[i], pts[i + 1], color_line, 1, cv2.LINE_AA)
+            for p in pts:
+                cv2.circle(frame, p, 2, color_point, -1, cv2.LINE_AA)
+
+        # Conexiones extras para estilo "mesh" entre rasgos clave.
+        if "nose_tip" in landmarks and "chin" in landmarks:
+            nose = scaled(landmarks["nose_tip"])
+            chin = scaled(landmarks["chin"])
+            if nose and len(chin) > 8:
+                cv2.line(frame, nose[len(nose) // 2], chin[len(chin) // 2], color_line, 1, cv2.LINE_AA)
+
+        if "left_eye" in landmarks and "right_eye" in landmarks and "nose_tip" in landmarks:
+            left_eye = scaled(landmarks["left_eye"])
+            right_eye = scaled(landmarks["right_eye"])
+            nose = scaled(landmarks["nose_tip"])
+            if left_eye and right_eye and nose:
+                left_center = left_eye[len(left_eye) // 2]
+                right_center = right_eye[len(right_eye) // 2]
+                nose_center = nose[len(nose) // 2]
+                cv2.line(frame, left_center, nose_center, color_line, 1, cv2.LINE_AA)
+                cv2.line(frame, right_center, nose_center, color_line, 1, cv2.LINE_AA)
+                cv2.line(frame, left_center, right_center, color_line, 1, cv2.LINE_AA)
 
     def _loop(self):
         last_fps_ts = time.time()
@@ -317,11 +378,31 @@ class FaceAccessEngine:
         self.video_capture.release()
 
     def _process_frame(self, frame):
-        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-        rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+        self.frame_index += 1
+        scale_factor = 1.0 / FRAME_SCALE
 
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+        should_process = (
+            self.frame_index % max(1, PROCESS_EVERY_N_FRAMES) == 0
+            or not self.cached_face_locations
+        )
+
+        if should_process:
+            small_frame = cv2.resize(frame, (0, 0), fx=FRAME_SCALE, fy=FRAME_SCALE)
+            rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+            face_locations = face_recognition.face_locations(rgb_small_frame)
+            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+            self.cached_face_locations = face_locations
+            self.cached_face_encodings = face_encodings
+
+            if self.enable_face_mesh and (
+                self.frame_index % max(1, LANDMARK_EVERY_N_FRAMES) == 0 or not self.cached_face_landmarks
+            ):
+                self.cached_face_landmarks = face_recognition.face_landmarks(rgb_small_frame, face_locations)
+        else:
+            face_locations = self.cached_face_locations
+            face_encodings = self.cached_face_encodings
+
+        face_landmarks_list = self.cached_face_landmarks if self.enable_face_mesh else []
 
         rostro_autorizado_en_frame = False
         rostro_desconocido_en_frame = False
@@ -359,14 +440,17 @@ class FaceAccessEngine:
             else:
                 rostro_desconocido_en_frame = True
 
-            top *= 4
-            right *= 4
-            bottom *= 4
-            left *= 4
+            top = int(top * scale_factor)
+            right = int(right * scale_factor)
+            bottom = int(bottom * scale_factor)
+            left = int(left * scale_factor)
 
             cv2.rectangle(frame, (left, top), (right, bottom), color_caja, 2)
             cv2.rectangle(frame, (left, bottom - 35), (right, bottom), color_caja, cv2.FILLED)
             cv2.putText(frame, nombre, (left + 6, bottom - 8), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 0, 0), 1)
+
+            if self.enable_face_mesh and idx < len(face_landmarks_list):
+                self._draw_face_mesh_overlay(frame, face_landmarks_list[idx], scale_factor=scale_factor)
 
         if rostro_autorizado_en_frame:
             self.frames_consecutivos_autorizados = min(
@@ -492,6 +576,7 @@ class FaceAccessEngine:
                 "arduino_connected": bool(device.get("connected")) if ok else False,
                 "plex_url": PLEX_URL,
                 "db_connected": self.db_connected,
+                "mesh_enabled": self.enable_face_mesh,
             }
 
     def get_logs(self, limit=100):
@@ -656,6 +741,14 @@ def api_intrusos():
 @app.get("/api/reportes")
 def api_reportes():
     return jsonify(engine.get_reportes())
+
+
+@app.post("/api/mesh")
+def api_mesh():
+    payload = request.get_json(silent=True) or {}
+    enabled = bool(payload.get("enabled", True))
+    engine.set_mesh_enabled(enabled)
+    return jsonify({"ok": True, "mesh_enabled": enabled})
 
 
 if __name__ == "__main__":
