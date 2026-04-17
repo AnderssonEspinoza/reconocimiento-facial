@@ -699,6 +699,81 @@ class FaceAccessEngine:
                     )
                 conn.commit()
             self.db_connected = True
+            clean = self._normalizar_metrica_clean(
+                metrica=metrica,
+                valor=valor,
+                unidad=unidad,
+                etiquetas=payload_etiquetas,
+            )
+            self._registrar_metrica_clean_db(
+                metrica=clean["metrica"],
+                valor=clean["valor"],
+                unidad=clean["unidad"],
+                etiquetas=clean["etiquetas"],
+            )
+        except Exception:
+            self.db_connected = False
+
+    def _normalizar_metrica_clean(self, *, metrica, valor=None, unidad=None, etiquetas=None):
+        etiquetas_in = etiquetas or {}
+        persona = str(etiquetas_in.get("persona") or "").strip()
+        evento = str(etiquetas_in.get("evento") or "").strip().upper()
+        desconocido = persona.lower() in {"", "desconocido", "unknown", "id_desconocida"}
+
+        mapa_metricas = {
+            "intento_acceso_total": ("acceso_intento", "conteo"),
+            "acceso_concedido": ("acceso_concedido", "conteo"),
+            "acceso_denegado": ("acceso_denegado", "conteo"),
+            "distancia_facial": ("biometria_distancia_facial", "distancia"),
+            "confianza_biometrica": ("biometria_confianza", "porcentaje"),
+            "latencia_reconocimiento": ("rendimiento_latencia_reconocimiento", "ms"),
+        }
+        metrica_clean, unidad_default = mapa_metricas.get(metrica, (metrica, unidad or "sin_unidad"))
+
+        valor_clean = valor
+        try:
+            if valor is not None:
+                valor_clean = round(float(valor), 4)
+        except Exception:
+            valor_clean = None
+
+        if unidad_default == "conteo":
+            valor_clean = 1.0
+
+        etiquetas_clean = {
+            "evento": evento or "SIN_EVENTO",
+            "persona": persona or "Desconocido",
+            "persona_normalizada": re.sub(r"\s+", "_", (persona or "Desconocido").strip().lower()),
+            "es_desconocido": bool(desconocido),
+            "metrica_origen": metrica,
+        }
+
+        for key, raw_val in etiquetas_in.items():
+            if key in etiquetas_clean:
+                continue
+            etiquetas_clean[key] = raw_val
+
+        return {
+            "metrica": metrica_clean,
+            "valor": valor_clean,
+            "unidad": unidad_default,
+            "etiquetas": etiquetas_clean,
+        }
+
+    def _registrar_metrica_clean_db(self, metrica, valor=None, unidad=None, etiquetas=None):
+        payload_etiquetas = etiquetas or {}
+        try:
+            with psycopg2.connect(DB_URL) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO metricas_clean (metrica, valor, unidad, etiquetas, origen)
+                        VALUES (%s, %s, %s, %s, %s)
+                        """,
+                        (metrica, valor, unidad, Json(payload_etiquetas), "face-service"),
+                    )
+                conn.commit()
+            self.db_connected = True
         except Exception:
             self.db_connected = False
 

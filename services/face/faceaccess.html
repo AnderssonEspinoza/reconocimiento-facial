@@ -187,7 +187,7 @@
   .cam-metric strong { color: var(--text-main); font-weight: 800;}
 
   /* --- CONTROL PANEL --- */
-  .controls-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border-solid); padding: 1px; }
+  .controls-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border-solid); padding: 1px; }
   .cmd-btn {
     padding: 20px 16px; background: #fff; border: none;
     color: var(--text-main); font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.05em; font-weight: 700;
@@ -359,6 +359,10 @@
           <button class="cmd-btn" onclick="reloadFaceBase()">
             <span class="cmd-marker">// CMD_04</span>
             RECARGAR BASE
+          </button>
+          <button class="cmd-btn" onclick="downloadMetricasCsv()">
+            <span class="cmd-marker">// CMD_05</span>
+            DESCARGAR DATOS
           </button>
         </div>
       </div>
@@ -682,6 +686,16 @@
     if (btn) {
       setTimeout(() => { btn.disabled = false; }, 5000);
     }
+  }
+
+  function downloadMetricasCsv(tipo = 'raw') {
+    const endpoint = tipo === 'clean' ? '/api/metricas/clean.csv' : '/api/metricas/raw.csv';
+    const a = document.createElement('a');
+    a.href = `${endpoint}?limit=10000&ts=${Date.now()}`;
+    a.download = tipo === 'clean' ? 'metricas_clean.csv' : 'metricas_raw.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function renderLogs(logs) {
