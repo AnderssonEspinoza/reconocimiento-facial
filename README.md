@@ -1,27 +1,13 @@
-# FaceAccess PDP
+# PROYECTO PDP - Seguridad Biometrica
 
-Plataforma de control de acceso biometrico basada en reconocimiento facial, construida con arquitectura de microservicios y preparada para despliegue con Docker.
+Sistema de control de acceso con:
+- Reconocimiento facial en tiempo real.
+- 2FA TOTP por usuario (QR + autenticador).
+- Roles y estado de usuarios (`admin`, `seguridad`, `empleado`, `visita`).
+- Alertas de seguridad via `n8n` (Telegram).
+- Arquitectura de microservicios (`face-service`, `device-service`, `postgres-service`).
 
-## Caracteristicas
-- Verificacion facial en tiempo real con OpenCV + `face_recognition`
-- Buffer biometrico (frames consecutivos) para evitar falsos positivos
-- Deteccion y captura de intrusos
-- Mensajeria a Arduino/LCD por microservicio dedicado (`device-service`)
-- Apertura de Plex/CasaOS tras acceso valido
-- Auditoria dual:
-  - `registro_accesos.csv` (respaldo local)
-  - PostgreSQL (`access_logs`) para analitica y reportes
-- Dashboard web con estado en vivo y metricas de base de datos
-
-## Arquitectura (Microservicios)
-- `face-service` (puerto `8000`):
-  - Camara, reconocimiento facial, reglas de acceso, dashboard y reportes
-- `device-service` (puerto `8001`):
-  - Integracion serial con Arduino/LCD
-- `postgres-service` (puerto `5432`):
-  - Persistencia de auditoria (`access_logs`)
-
-## Estructura del proyecto
+## Estructura
 ```text
 services/
   face/
@@ -36,107 +22,112 @@ services/
 db/
   init.sql
 scripts/
+  run_linux.sh
+  run_windows.ps1
+  bootstrap_empresa.sh
   import_csv_to_postgres.sh
+docs/
+  usuarios_empresa_ejemplo.csv
+  n8n_workflow_alertas_seguridad.json
 data/
-  README.md
-
+  known_faces/
+    README.md
 docker-compose.yml
-README.md
 ```
 
-## Requisitos
-- Docker y Docker Compose
-- Camara local (`/dev/video0` en Linux)
-- (Opcional) Arduino conectado por USB (`/dev/ttyACM0` o `/dev/ttyUSB0`)
+## Configuracion minima
+En `docker-compose.yml` (servicio `face-service`) revisa:
+- `TWO_FA_ADMIN_TOKEN`: token admin para operaciones sensibles (QR/enrolamiento/roles).
+- `N8N_WEBHOOK_URL`: webhook de n8n (opcional).
+- `PLEX_URL`: URL de Jellyfin/Plex/CasaOS a abrir tras acceso concedido.
 
-## Configuracion de datos sensibles (obligatorio)
-Este repositorio **no incluye** datos biometricos personales.
+Tambien agrega fotos de entrenamiento por usuario:
+- `data/known_faces/<Usuario>/foto1.jpg`
+- `data/known_faces/<Usuario>/foto2.jpg`
 
-1. Coloca tu foto de referencia en:
+## Arranque rapido Linux (recomendado)
+Desde la raiz del proyecto:
 ```bash
-data/foto_referencia.png
+./scripts/run_linux.sh
 ```
-2. Asegurate de que sea una foto frontal, bien iluminada y con un solo rostro.
 
-## Ejecutar el sistema
-### 1) Build inicial
+O manual:
 ```bash
-sudo docker compose build
+sudo docker compose up -d --build
 ```
 
-### 2) Levantar servicios
+Dashboard:
+- `http://localhost:8000`
+
+## Arranque rapido Windows
+En Windows, la webcam dentro de Docker Desktop puede fallar.  
+Modo recomendado: DB + device en Docker, `face-service` local.
+
+En PowerShell (raiz del proyecto):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_windows.ps1 -AdminToken "CAMBIA_ESTE_TOKEN_ADMIN"
+```
+
+Dashboard:
+- `http://localhost:8000`
+
+## Alta masiva de usuarios (empresa)
+1. Edita `docs/usuarios_empresa_ejemplo.csv`:
+```csv
+username,role,requires_2fa,active
+Andersson,admin,true,true
+Roberto,empleado,true,true
+Invitado1,visita,false,false
+```
+
+2. Ejecuta bootstrap:
 ```bash
-sudo docker compose up
+ADMIN_TOKEN="TU_TOKEN_ADMIN" ./scripts/bootstrap_empresa.sh
 ```
 
-### 3) Abrir dashboard
-- URL: `http://127.0.0.1:8000`
+El script crea/actualiza usuarios en `users_security` y aplica rol/estado/2FA.
 
-## Variables relevantes
-En `docker-compose.yml`:
-- `PLEX_URL`: URL de Plex/CasaOS para abrir al conceder acceso
-- `DEVICE_SERVICE_URL`: URL interna del microservicio de Arduino
-- `DB_URL`: conexion PostgreSQL usada por `face-service`
-- `FOTO_REFERENCIA_PATH`: ruta interna de la imagen de referencia (`/app/data/foto_referencia.png`)
+## Enrolamiento QR por usuario
+El secreto TOTP real queda guardado en DB y no se muestra completo.
+Para mostrar QR de un usuario (solo admin):
 
-## Importar historial CSV a PostgreSQL
-Si ya tienes eventos en `registro_accesos.csv`:
-```bash
-./scripts/import_csv_to_postgres.sh
+```text
+http://localhost:8000/api/2fa/qr?token=TU_TOKEN_ADMIN&username=Roberto
 ```
 
-El script:
-- levanta `postgres-service`
-- espera estado healthy
-- importa CSV a `access_logs`
-- evita duplicados
+Nota: si el token tiene `#`, en URL debe ir como `%23`.
 
-## Endpoints principales
-### face-service
+## Endpoints clave
 - `GET /api/status`
-- `GET /api/logs?limit=120`
-- `GET /api/reportes`
-- `GET /api/users`
-- `POST /api/users`
-- `DELETE /api/users/<name>`
 - `POST /api/start_scan`
 - `POST /api/reset`
-- `GET /video_feed`
+- `POST /api/2fa/verify`
+- `GET /api/security/panel`
+- `GET /api/metricas/raw`
+- `GET /api/metricas/raw.csv`
+- `GET /api/metricas/resumen`
 
-### device-service
-- `GET /health`
-- `GET /status`
-- `POST /notify`
+Admin:
+- `GET /api/admin/users_security`
+- `POST /api/admin/users_security/enroll`
+- `POST /api/admin/users_security/<username>/active`
+- `POST /api/admin/users_security/<username>/role`
+- `POST /api/admin/users_security/<username>/rotate_2fa`
 
-## Consultas SQL utiles
-```sql
-SELECT evento, COUNT(*)
-FROM access_logs
-GROUP BY evento;
-```
+## n8n + Telegram
+Importa:
+- `docs/n8n_workflow_alertas_seguridad.json`
 
-```sql
-SELECT fecha_hora, evento, persona, distancia
-FROM access_logs
-ORDER BY fecha_hora DESC
-LIMIT 20;
-```
+Variables requeridas en n8n:
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
 
-## Documentacion en Jupyter (equipo)
-Se incluye plantilla para informe tecnico:
-- `docs/JUPYTER_MARKDOWN_TEMPLATE.md`
+Y configura en `face-service`:
+- `N8N_WEBHOOK_URL=http://TU_N8N/webhook/pdp-security-events`
 
-Tu compañero puede copiar esa estructura a una celda Markdown de JupyterLab y completar evidencia, capturas y conclusiones.
-
-## Buenas practicas de versionado
-Este proyecto ignora automaticamente:
-- fotos biometricas (`data/foto_referencia.png`)
-- capturas de intrusos (`intrusos/`)
-- bitacora local (`registro_accesos.csv`)
-- archivo `faceaccess.html` legacy en raiz
-
-## Estado del proyecto
-Listo para:
-- demo academica
-- sustentacion con enfoque enterprise
-- evolucion a observabilidad, auth y alertas (fase siguiente)
+## Archivos sensibles que no se suben
+Ignorados por `.gitignore`:
+- Fotos personales (`foto_referencia.png`, `data/known_faces/**` excepto README).
+- Capturas de intrusos (`intrusos/`).
+- Secreto local TOTP (`data/totp_secret.txt`).
+- Logs locales (`registro_accesos.csv`).

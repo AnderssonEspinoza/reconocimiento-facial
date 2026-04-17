@@ -49,11 +49,28 @@ services:
     ports:
       - "8000:8000"
     environment:
-      PLEX_URL: "http://host.docker.internal:32400/web"
+      PLEX_URL: "http://host.docker.internal:8097/web/index.html#/dashboard"
       DEVICE_SERVICE_URL: "http://device-service:8001"
       DB_URL: "postgresql://faceaccess:faceaccess@postgres-service:5432/faceaccess"
       TZ: America/Lima
       FOTO_REFERENCIA_PATH: "/app/data/foto_referencia.png"
+      ENABLE_FACE_MESH: "0"
+      AUTO_PERFORMANCE_MODE: "1"
+      FRAME_SCALE: "0.22"
+      PROCESS_EVERY_N_FRAMES: "2"
+      HIGH_LOAD_FRAME_SCALE: "0.18"
+      HIGH_LOAD_PROCESS_EVERY_N_FRAMES: "4"
+      TARGET_FPS_MIN: "12"
+      MAX_FACES_PER_FRAME: "4"
+      CAMERA_WIDTH: "960"
+      CAMERA_HEIGHT: "540"
+      JPEG_QUALITY: "75"
+      ENABLE_2FA: "1"
+      TOTP_ISSUER: "PROYECTO_PDP"
+      TOTP_ACCOUNT: "acceso@pdp.local"
+      TWO_FA_ADMIN_TOKEN: "${TWO_FA_ADMIN_TOKEN:-CAMBIA_ESTE_TOKEN_ADMIN}"
+      ENABLE_LIVENESS_CHALLENGE: "1"
+      N8N_WEBHOOK_URL: "${N8N_WEBHOOK_URL:-}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     privileged: true

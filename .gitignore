@@ -10,6 +10,7 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+.codex
 
 # Runtime artifacts
 intrusos/
@@ -19,6 +20,9 @@ registro_accesos.csv
 foto_referencia.png
 services/face/foto_referencia.png
 data/foto_referencia.png
+data/known_faces/**
+!data/known_faces/README.md
+data/totp_secret.txt
 
 # Legacy root UI file (keep local if needed, but not in repo)
 /faceaccess.html
