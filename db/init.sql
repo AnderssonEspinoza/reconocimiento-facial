@@ -5,3 +5,34 @@ CREATE TABLE IF NOT EXISTS access_logs (
   persona VARCHAR(128) NOT NULL,
   distancia DOUBLE PRECISION
 );
+
+CREATE TABLE IF NOT EXISTS metricas_raw (
+  id BIGSERIAL PRIMARY KEY,
+  fecha_hora TIMESTAMP NOT NULL DEFAULT NOW(),
+  metrica VARCHAR(64) NOT NULL,
+  valor DOUBLE PRECISION,
+  unidad VARCHAR(32),
+  etiquetas JSONB NOT NULL DEFAULT '{}'::jsonb,
+  origen VARCHAR(64) NOT NULL DEFAULT 'face-service'
+);
+
+CREATE TABLE IF NOT EXISTS metricas_clean (
+  id BIGSERIAL PRIMARY KEY,
+  fecha_hora TIMESTAMP NOT NULL,
+  metrica VARCHAR(64) NOT NULL,
+  valor DOUBLE PRECISION,
+  unidad VARCHAR(32),
+  dimension_1 VARCHAR(64),
+  dimension_2 VARCHAR(64),
+  notas TEXT
+);
+
+CREATE TABLE IF NOT EXISTS users_security (
+  username VARCHAR(128) PRIMARY KEY,
+  role VARCHAR(32) NOT NULL DEFAULT 'empleado',
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  requires_2fa BOOLEAN NOT NULL DEFAULT TRUE,
+  totp_secret VARCHAR(128),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

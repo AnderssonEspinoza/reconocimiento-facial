@@ -1,0 +1,76 @@
+{
+  "name": "PDP - Alertas Seguridad (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "pdp-security-events",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "Webhook_In",
+      "name": "Webhook Seguridad",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "pdp-security-events"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "mensaje",
+              "value": "={{\n(() => {\n  const ev = $json.body?.event_type || 'evento_desconocido';\n  const payload = $json.body?.payload || {};\n  const sev = ev === 'intruso_detectado' || ev === 'lock_activado' ? 'CRITICA' : (ev === '2fa_fallido' ? 'ALTA' : 'INFO');\n  const icon = sev === 'CRITICA' ? '🚨' : (sev === 'ALTA' ? '⚠️' : '✅');\n  return `${icon} PDP Seguridad\\nSeveridad: ${sev}\\nEvento: ${ev}\\nDetalle: ${JSON.stringify(payload)}`;\n})()\n}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "Set_Mensaje",
+      "name": "Preparar Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": $env.TELEGRAM_CHAT_ID,\n  \"text\": $json.mensaje\n}",
+        "options": {}
+      },
+      "id": "HTTP_Telegram",
+      "name": "Enviar Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [790, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "Respond",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Seguridad": {
+      "main": [[{ "node": "Preparar Mensaje", "type": "main", "index": 0 }]]
+    },
+    "Preparar Mensaje": {
+      "main": [[{ "node": "Enviar Telegram", "type": "main", "index": 0 }]]
+    },
+    "Enviar Telegram": {
+      "main": [[{ "node": "Responder Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "pdp-workflow-telegram-v1"
+}

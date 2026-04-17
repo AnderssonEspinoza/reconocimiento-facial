@@ -1,0 +1,6 @@
+username,role,requires_2fa,active
+Andersson,admin,true,true
+Orlando,seguridad,true,true
+Roberto,empleado,true,true
+Sergio,empleado,true,true
+Invitado1,visita,false,false
