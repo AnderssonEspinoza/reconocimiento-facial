@@ -16,16 +16,34 @@ Sistema de control de acceso facial con arquitectura de microservicios, 2FA por 
 - Docker + Docker Compose
 - Linux recomendado para cámara en contenedor
 
-## Arranque rápido (micro)
+## Arranque rápido Linux (1 comando)
 ```bash
 cd /home/andersson/Escritorio/proyecto-pdp
 ./scripts/run_micro.sh
 ```
 
-O manual:
+Alternativa manual:
 ```bash
 sudo docker compose -f docker-compose.micro.yml up -d --build
 ```
+
+## Arranque rápido Windows (1 comando)
+En PowerShell, desde la raíz del proyecto:
+
+```powershell
+docker compose -f docker-compose.micro.yml up -d --build
+```
+
+También puedes usar Git Bash/WSL:
+
+```bash
+bash ./scripts/run_micro.sh
+```
+
+Nota importante sobre cámara en Windows:
+- Docker Desktop + webcam puede fallar en algunos equipos/drivers.
+- Si pasa eso, API/admin/métricas sí levantan, pero el stream de cámara puede no abrir.
+- Para demos con cámara estable, Linux es la opción recomendada.
 
 ## URLs principales
 - App: `http://localhost:8002`
