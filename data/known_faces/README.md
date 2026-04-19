@@ -14,8 +14,8 @@ Recomendaciones:
 - Ángulos ligeramente diferentes.
 - Un solo rostro principal por imagen.
 
-Despues de agregar fotos, reinicia `face-service` para recargar la base:
+Despues de agregar fotos, reinicia `recognition-service` para recargar la base:
 
 ```bash
-sudo docker compose restart face-service
+sudo docker compose -f docker-compose.micro.yml restart recognition-service
 ```

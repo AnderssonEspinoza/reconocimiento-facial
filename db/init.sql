@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS metricas_raw (
   valor DOUBLE PRECISION,
   unidad VARCHAR(32),
   etiquetas JSONB NOT NULL DEFAULT '{}'::jsonb,
-  origen VARCHAR(64) NOT NULL DEFAULT 'face-service'
+  origen VARCHAR(64) NOT NULL DEFAULT 'access-service'
 );
 
 CREATE TABLE IF NOT EXISTS metricas_clean (

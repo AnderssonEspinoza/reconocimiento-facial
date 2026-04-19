@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panel Admin - Proyecto PDP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef3fb;
+    --panel: #ffffff;
+    --panel-soft: #f4f8ff;
+    --line: #d6e0ef;
+    --text: #122136;
+    --muted: #5c6f8b;
+    --primary: #1f4ec9;
+    --ok: #0f9f6e;
+    --warn: #c78512;
+    --err: #cf2e4e;
+    --shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Manrope", "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 8% 10%, #e6eeff 0%, transparent 35%),
+      radial-gradient(circle at 95% 95%, #def6f3 0%, transparent 35%),
+      var(--bg);
+  }
+
+  .app {
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 22px;
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 18px;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    background: linear-gradient(165deg, #1f4ec9 0%, #1d3f9b 100%);
+    border-radius: 18px;
+    color: #fff;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .brand { font-size: 18px; font-weight: 800; line-height: 1.2; }
+  .brand small { display: block; font-size: 12px; opacity: .82; margin-top: 4px; font-weight: 500; }
+
+  .nav { display: grid; gap: 8px; margin-top: 8px; }
+  .nav-item {
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    background: rgba(255,255,255,.08);
+    transition: transform .18s ease, background .18s ease;
+    text-align: left;
+    color: #fff;
+    width: 100%;
+    cursor: pointer;
+    font-family: "Manrope", sans-serif;
+    font-weight: 700;
+  }
+  .nav-item:hover { transform: translateX(2px); background: rgba(255,255,255,.15); }
+  .nav-item.active { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.55); }
+
+  .main { display: grid; gap: 16px; }
+
+  .topbar {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .top-title h1 { margin: 0; font-size: 20px; font-weight: 800; }
+  .top-title p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+  }
+  .kpi .lbl { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .kpi .val { font-size: 24px; font-weight: 800; font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #3f4c66; }
+  label { font-size: 12px; color: var(--muted); display: block; margin: 8px 0 4px; }
+
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: #fff;
+    color: var(--text);
+    outline: none;
+    font-family: "Manrope", sans-serif;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #8fb0ff; box-shadow: 0 0 0 3px rgba(63,100,216,.14); }
+
+  .inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+  button {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    background: var(--primary);
+    color: #fff;
+    transition: transform .15s ease, filter .15s ease;
+    font-family: "Manrope", sans-serif;
+  }
+  button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  button.secondary { background: #5b6c86; }
+  button.warn { background: var(--warn); }
+  button.err { background: var(--err); }
+
+  .small { font-size: 12px; color: var(--muted); }
+  .ok { color: var(--ok); }
+  .errtxt { color: var(--err); }
+
+  pre {
+    margin: 8px 0 0;
+    max-height: 220px;
+    overflow: auto;
+    background: var(--panel-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  th, td { border-bottom: 1px solid #edf1f7; padding: 10px; text-align: left; vertical-align: top; }
+  th { position: sticky; top: 0; background: #f6f9ff; color: #425170; font-weight: 700; z-index: 1; }
+
+  .tag {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    background: #f8fafc;
+  }
+
+  #usersTable th:nth-child(6),
+  #usersTable td:nth-child(6) {
+    min-width: 420px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .actions button {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px;
+    background: var(--panel-soft);
+  }
+  .stat .lbl { font-size: 11px; color: var(--muted); }
+  .stat .val { font-size: 18px; font-weight: 800; }
+
+  .detail-top {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .profile-photo {
+    width: 110px;
+    height: 110px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    object-fit: cover;
+    background: #f3f6fb;
+  }
+
+  .timeline { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .live-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+  .live-kpi {
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px;
+    background:var(--panel-soft);
+  }
+  .live-kpi .lbl { font-size:11px; color:var(--muted); }
+  .live-kpi .val { font-size:20px; font-weight:800; }
+  .live-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; }
+  .mini-chart {
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px;
+    background:#fff;
+  }
+  .traffic-wrap {
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px;
+    background:#fff;
+  }
+  .traffic-canvas {
+    width: 100%;
+    height: 170px;
+    display: block;
+  }
+  .traffic-legend {
+    margin-top: 6px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .mini-chart .t { font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .spark {
+    height:56px;
+    display:flex;
+    align-items:flex-end;
+    gap:2px;
+    border-top:1px dashed #dbe5f3;
+    padding-top:6px;
+  }
+  .spark > span {
+    flex:1;
+    min-width:3px;
+    border-radius:3px 3px 0 0;
+    background:#6b8de3;
+    opacity:.9;
+  }
+  .spark.ok > span { background:#1ca774; }
+  .spark.err > span { background:#cf2e4e; }
+  .spark.warn > span { background:#c78512; }
+
+  .state-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  .state-ok { background: #18a56f; box-shadow: 0 0 0 3px rgba(24,165,111,.15); }
+  .state-warn { background: #c78512; box-shadow: 0 0 0 3px rgba(199,133,18,.15); }
+  .state-bad { background: #cf2e4e; box-shadow: 0 0 0 3px rgba(207,46,78,.15); }
+
+  .executive-grid {
+    display: grid;
+    grid-template-columns: 1.3fr .7fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .panel-soft {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px;
+  }
+
+  .service-bars { display: grid; gap: 8px; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 130px;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .bar-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #ebf1fb;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7da2ff, #2a5de0);
+  }
+  .bar-fill.bad {
+    background: linear-gradient(90deg, #f4a6b2, #cf2e4e);
+  }
+
+  .cam-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .cam-box {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--panel-soft);
+  }
+  .cam-box .t { font-size: 12px; color: var(--muted); }
+  .cam-box .v { font-size: 22px; font-weight: 800; margin: 4px 0; }
+  .cam-box .d { font-size: 11px; color: var(--muted); }
+  .cpu-wrap { display:flex; align-items:center; justify-content:center; padding:6px 0; }
+  .cpu-gauge {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(#2a5de0 0deg, #2a5de0 180deg, #e7edf9 180deg, #e7edf9 360deg);
+    position: relative;
+  }
+  .cpu-gauge::after {
+    content: "";
+    width: 118px;
+    height: 118px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+  }
+  .cpu-label {
+    position: relative;
+    z-index: 1;
+    font-size: 28px;
+    font-weight: 800;
+  }
+  .alert-list { display: grid; gap: 8px; }
+  .alert-item {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px;
+    background: #fff;
+    font-size: 12px;
+  }
+  .alert-item.ok { border-left: 4px solid #18a56f; }
+  .alert-item.warn { border-left: 4px solid #c78512; }
+  .alert-item.err { border-left: 4px solid #cf2e4e; }
+
+  .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill-btn {
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--text);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pill-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(17,24,39,.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 20;
+  }
+  .modal .box {
+    width: min(92vw, 460px);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+  }
+
+  .fade-up { animation: fadeUp .35s ease both; }
+  .fade-up.d2 { animation-delay: .06s; }
+  .fade-up.d3 { animation-delay: .12s; }
+  .fade-up.d4 { animation-delay: .18s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  code { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  @media (max-width: 1250px) {
+    .app { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .grid2, .grid3, .stats { grid-template-columns: 1fr; }
+    .executive-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 680px) {
+    .kpis, .grid3, .stats { grid-template-columns: 1fr; }
+    .detail-top { grid-template-columns: 1fr; }
+    #usersTable th:nth-child(6),
+    #usersTable td:nth-child(6) {
+      min-width: 300px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar fade-up">
+    <div class="brand">Proyecto PDP
+      <small>SecureOps Console</small>
+    </div>
+    <div class="nav">
+      <button class="nav-item active" data-section="resumen">Resumen</button>
+      <button class="nav-item" data-section="usuarios">Usuarios</button>
+      <button class="nav-item" data-section="seguridad">Seguridad 2FA</button>
+      <button class="nav-item" data-section="carga">Carga Masiva</button>
+      <button class="nav-item" data-section="intrusos">Intrusos</button>
+      <button class="nav-item" data-section="metricas-live">Telemetria</button>
+      <button class="nav-item" data-section="exportes">Exportes</button>
+    </div>
+    <p class="small" style="color:rgba(255,255,255,.85);margin-top:auto;">Panel del stack micro en <code style="color:#fff;">:8002</code>.</p>
+  </aside>
+
+  <main class="main">
+    <section class="topbar fade-up">
+      <div class="top-title">
+        <h1>Administracion de Seguridad</h1>
+        <p>Gestiona usuarios, roles, 2FA y altas masivas desde una consola central.</p>
+      </div>
+      <div class="inline">
+        <input id="adminToken" type="password" placeholder="Token admin" style="min-width:280px" />
+        <button onclick="saveToken()">Guardar Token</button>
+        <button class="secondary" onclick="refreshAll()">Refrescar</button>
+        <span id="tokenState" class="small">Token no cargado</span>
+      </div>
+    </section>
+
+    <section id="section-resumen" class="page-section active fade-up d2">
+      <div class="kpis" style="margin-bottom:16px;">
+        <div class="kpi"><div class="lbl">Total Usuarios</div><div class="val" id="kpiTotal">0</div></div>
+        <div class="kpi"><div class="lbl">Usuarios Activos</div><div class="val" id="kpiActive">0</div></div>
+        <div class="kpi"><div class="lbl">2FA Activo</div><div class="val" id="kpi2fa">0</div></div>
+        <div class="kpi"><div class="lbl">Administradores</div><div class="val" id="kpiAdmins">0</div></div>
+      </div>
+      <div class="card">
+        <h2>Estado del Panel</h2>
+        <p class="small">Usa el menu lateral para cambiar de seccion. La seccion <b>Usuarios</b> tiene flujo en dos pasos: listado y detalle.</p>
+      </div>
+    </section>
+
+    <section id="section-usuarios" class="page-section fade-up d3">
+      <div id="usersListView" class="view active">
+        <div class="card">
+          <h2>Listado de Usuarios</h2>
+          <div class="inline" style="margin-bottom:10px;">
+            <button onclick="loadUsers()">Actualizar Lista</button>
+            <span id="usersMsg" class="small"></span>
+          </div>
+          <div class="table-wrap">
+            <table id="usersTable">
+              <thead>
+                <tr><th>Usuario</th><th>Rol</th><th>Activo</th><th>2FA</th><th>Secreto</th><th>Acciones</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="usersDetailView" class="view">
+        <div class="card">
+          <div class="inline" style="justify-content:space-between; margin-bottom:8px;">
+            <h2 style="margin:0">Detalle del Usuario</h2>
+            <button class="secondary" onclick="backToUsersList()">Volver al listado</button>
+          </div>
+          <div id="profileBox">
+            <div class="small">Cargando...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="section-seguridad" class="page-section fade-up d3">
+      <div class="card">
+        <h2>Alta / Edicion Usuario</h2>
+        <label>Username</label>
+        <input id="fUsername" placeholder="Ej: Roberto" />
+        <div class="grid3">
+          <div>
+            <label>Rol</label>
+            <select id="fRole">
+              <option>admin</option><option>seguridad</option><option selected>empleado</option><option>visita</option>
+            </select>
+          </div>
+          <div>
+            <label>Requiere 2FA</label>
+            <select id="f2fa"><option value="true" selected>true</option><option value="false">false</option></select>
+          </div>
+          <div>
+            <label>Activo</label>
+            <select id="fActive"><option value="true" selected>true</option><option value="false">false</option></select>
+          </div>
+        </div>
+        <div class="inline" style="margin-top:10px;">
+          <button onclick="enrollOne()">Guardar Usuario</button>
+          <button class="warn" onclick="rotate2FAFromForm()">Rotar 2FA</button>
+          <button class="secondary" onclick="showQrFromForm()">Ver QR</button>
+          <button class="err" onclick="deleteFromForm()">Eliminar</button>
+        </div>
+        <p id="singleMsg" class="small"></p>
+      </div>
+    </section>
+
+    <section id="section-carga" class="page-section fade-up d3">
+      <div class="card">
+        <h2>Carga Masiva CSV</h2>
+        <p class="small">Formato: <code>username,role,requires_2fa,active</code></p>
+        <input type="file" id="csvFile" accept=".csv,text/csv" />
+        <div class="inline" style="margin-top:10px;">
+          <button onclick="previewCsv()">Previsualizar</button>
+          <button onclick="importCsv()">Importar CSV</button>
+        </div>
+        <pre id="csvPreview">Sin previsualizacion</pre>
+        <p id="bulkMsg" class="small"></p>
+      </div>
+    </section>
+
+    <section id="section-intrusos" class="page-section fade-up d3">
+      <div class="card">
+        <h2>Evidencias de Intrusos</h2>
+        <div class="inline" style="margin-bottom:10px;">
+          <button onclick="loadIntrusos()">Actualizar Evidencias</button>
+          <span class="small" id="intrusosCount">0 archivos</span>
+        </div>
+        <div id="intrusosGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;"></div>
+      </div>
+    </section>
+
+    <section id="section-metricas-live" class="page-section fade-up d4">
+      <div class="card">
+        <h2>Telemetria del Sistema (Vista Ejecutiva)</h2>
+        <div class="inline" style="margin-bottom:10px;">
+          <button onclick="refreshLiveMetrics()">Actualizar Ahora</button>
+          <button class="secondary" id="btnLiveAuto" onclick="toggleLiveAuto()">Auto-refresh: ON</button>
+          <label style="margin:0;">Intervalo (s)</label>
+          <select id="liveInterval" style="width:90px;">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+          </select>
+          <div class="pill-group">
+            <button class="pill-btn active" data-range="5m" onclick="setLiveRange('5m')">5m</button>
+            <button class="pill-btn" data-range="15m" onclick="setLiveRange('15m')">15m</button>
+            <button class="pill-btn" data-range="1h" onclick="setLiveRange('1h')">1h</button>
+          </div>
+          <span class="small" id="liveGeneratedAt">--</span>
+        </div>
+
+        <div class="live-kpis">
+          <div class="live-kpi"><div class="lbl">Salud del Sistema</div><div class="val" id="lkState"><span class="state-dot state-ok"></span>OK</div></div>
+          <div class="live-kpi"><div class="lbl">% Acceso Permitido</div><div class="val" id="lkGranted">0%</div></div>
+          <div class="live-kpi"><div class="lbl">% Acceso Denegado</div><div class="val" id="lkDenied">0%</div></div>
+          <div class="live-kpi"><div class="lbl">Latencia Promedio</div><div class="val" id="lkLatency">0 ms</div></div>
+        </div>
+
+        <div class="executive-grid">
+          <div class="panel-soft">
+            <div class="traffic-wrap" style="margin-bottom:8px;">
+              <div class="t">Tráfico de Red / Eventos (%)</div>
+              <canvas id="trafficChart" class="traffic-canvas"></canvas>
+              <div class="traffic-legend">
+                <span><span class="legend-dot" style="background:#1ca774;"></span>Entrada (Concedidos %)</span>
+                <span><span class="legend-dot" style="background:#cf2e4e;"></span>Salida (Denegados %)</span>
+              </div>
+            </div>
+            <div class="mini-chart">
+              <div class="t">Métricas de Latencia (ms)</div>
+              <div id="serviceBars" class="service-bars"></div>
+            </div>
+          </div>
+          <div class="panel-soft">
+            <div class="t" style="margin-bottom:8px;">Uso de CPU (estimado)</div>
+            <div class="cpu-wrap">
+              <div id="cpuGauge" class="cpu-gauge"><div id="cpuLabel" class="cpu-label">0%</div></div>
+            </div>
+            <div class="t" style="margin-bottom:8px;">Camara: Pobre vs Buena</div>
+            <div id="cameraCompare" class="cam-compare"></div>
+            <div class="mini-chart" style="margin-top:8px;">
+              <div class="t">% Fallo 2FA</div>
+              <div id="spark2faFail" class="spark warn"></div>
+            </div>
+            <div class="mini-chart" style="margin-top:8px;">
+              <div class="t">Alertas de Hardware / Sistema</div>
+              <div id="hwAlerts" class="alert-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h2>Vista Tecnica (Detalle)</h2>
+        <div class="inline" style="margin-bottom:10px;">
+          <label style="margin:0;">Fuente</label>
+          <select id="liveSource" style="width:120px;">
+            <option value="raw" selected>raw</option>
+            <option value="clean">clean</option>
+          </select>
+          <input id="liveFilterMetrica" placeholder="Filtrar por metrica" style="max-width:220px;" />
+          <input id="liveFilterServicio" placeholder="Filtrar servicio (auth/recognition...)" style="max-width:240px;" />
+          <input id="liveFilterPerfil" placeholder="Filtrar perfil camara (pobre/buena)" style="max-width:240px;" />
+          <button class="secondary" onclick="refreshLiveMetrics()">Aplicar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>TS</th><th>Metrica</th><th>Valor</th><th>Unidad</th><th>Etiquetas</th></tr>
+            </thead>
+            <tbody id="liveMetricsBody">
+              <tr><td colspan="5">Sin datos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="section-exportes" class="page-section fade-up d4">
+      <div class="card">
+        <h2>Exportes</h2>
+        <p class="small">Descarga de metricas por tipo en CSV o JSON.</p>
+        <div class="inline">
+          <button class="secondary" onclick="downloadRaw()">Descargar Metricas RAW CSV</button>
+          <button class="secondary" onclick="downloadClean()">Descargar Metricas CLEAN CSV</button>
+          <button class="secondary" onclick="downloadJsonFile('/api/metricas/raw?limit=10000','metricas_raw.json')">Descargar Metricas RAW JSON</button>
+          <button class="secondary" onclick="downloadJsonFile('/api/metricas/clean?limit=10000','metricas_clean.json')">Descargar Metricas CLEAN JSON</button>
+          <button class="secondary" onclick="downloadJsonFile('/api/reportes','reportes.json')">Descargar Reportes JSON</button>
+          <button class="secondary" onclick="downloadJsonFile('/api/metricas/resumen','metricas_resumen.json')">Descargar Resumen Metricas JSON</button>
+          <button class="secondary" onclick="downloadJsonFile('/api/intrusos','intrusos_lista.json')">Descargar Lista Intrusos JSON</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h2>Archivos de Exportacion</h2>
+        <p class="small">Descarga directa por nombre de archivo.</p>
+        <div class="inline" style="margin-bottom:10px;">
+          <button onclick="renderExportFiles()">Actualizar Lista de Archivos</button>
+          <span id="metricsMsg" class="small"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Archivo</th>
+                <th>Origen</th>
+                <th>Descarga</th>
+              </tr>
+            </thead>
+            <tbody id="metricsByNameBody">
+              <tr><td colspan="3">Sin datos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="qrModal" class="modal" onclick="hideQr()">
+  <div class="box" onclick="event.stopPropagation()">
+    <h2 style="margin-bottom:8px;">QR 2FA</h2>
+    <p id="qrUser" class="small"></p>
+    <img id="qrImg" alt="QR" style="width:100%; max-width:360px; border:1px solid var(--line); background:#fff; border-radius:8px;" />
+    <div class="inline" style="margin-top:10px;">
+      <button class="secondary" onclick="hideQr()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let TOKEN = localStorage.getItem('pdp_admin_token') || '';
+  let parsedCsvRows = [];
+  let selectedUser = '';
+  let liveAuto = true;
+  let liveTimer = null;
+  let liveRange = '5m';
+
+  function setMsg(id, text, ok=false) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = ok ? 'small ok' : 'small errtxt';
+  }
+
+  function saveToken() {
+    TOKEN = (document.getElementById('adminToken').value || '').trim();
+    localStorage.setItem('pdp_admin_token', TOKEN);
+    document.getElementById('tokenState').textContent = TOKEN ? 'Token cargado' : 'Token vacio';
+  }
+
+  function switchSection(name) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    const sec = document.getElementById(`section-${name}`);
+    if (sec) sec.classList.add('active');
+
+    const nav = document.querySelector(`.nav-item[data-section="${name}"]`);
+    if (nav) nav.classList.add('active');
+  }
+
+  function stopLivePolling() {
+    if (liveTimer) {
+      clearInterval(liveTimer);
+      liveTimer = null;
+    }
+  }
+
+  function startLivePolling() {
+    stopLivePolling();
+    const sel = document.getElementById('liveInterval');
+    const sec = Number((sel && sel.value) || 5);
+    if (!liveAuto) return;
+    liveTimer = setInterval(() => {
+      refreshLiveMetrics();
+    }, Math.max(2, sec) * 1000);
+  }
+
+  function toggleLiveAuto() {
+    liveAuto = !liveAuto;
+    const btn = document.getElementById('btnLiveAuto');
+    if (btn) btn.textContent = `Auto-refresh: ${liveAuto ? 'ON' : 'OFF'}`;
+    if (liveAuto) startLivePolling();
+    else stopLivePolling();
+  }
+
+  function openUsersList() {
+    switchSection('usuarios');
+    document.getElementById('usersListView').classList.add('active');
+    document.getElementById('usersDetailView').classList.remove('active');
+  }
+
+  function openUserDetail() {
+    switchSection('usuarios');
+    document.getElementById('usersListView').classList.remove('active');
+    document.getElementById('usersDetailView').classList.add('active');
+  }
+
+  function backToUsersList() {
+    openUsersList();
+  }
+
+  async function api(path, opts={}) {
+    const headers = { 'Content-Type':'application/json', ...(opts.headers || {}) };
+    if (TOKEN) headers['X-Admin-Token'] = TOKEN;
+    const res = await fetch(path, { ...opts, headers });
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res;
+  }
+
+  function fmtPct(v) {
+    const n = Number(v || 0);
+    if (!isFinite(n)) return '0%';
+    return `${n.toFixed(2)}%`;
+  }
+
+  function setLiveRange(range) {
+    liveRange = range;
+    document.querySelectorAll('.pill-btn[data-range]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.range === range);
+    });
+    refreshLiveMetrics();
+  }
+
+  function getRangePoints() {
+    const sec = Number((document.getElementById('liveInterval')?.value) || 5);
+    if (liveRange === '5m') return Math.max(6, Math.floor(300 / sec));
+    if (liveRange === '1h') return Math.max(12, Math.floor(3600 / sec));
+    return Math.max(8, Math.floor(900 / sec)); // 15m
+  }
+
+  function renderSpark(id, arr) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const vals = Array.isArray(arr) ? arr.slice(-getRangePoints()) : [];
+    if (!vals.length) {
+      el.innerHTML = '<span style="height:2px;opacity:.3"></span>';
+      return;
+    }
+    const max = Math.max(...vals, 1);
+    el.innerHTML = vals
+      .map(v => `<span style="height:${Math.max(4, (Number(v || 0) / max) * 48)}px"></span>`)
+      .join('');
+  }
+
+  function drawTrafficChart(grantedSeries, deniedSeries) {
+    const canvas = document.getElementById('trafficChart');
+    if (!canvas) return;
+    const hostWidth = Math.max(320, canvas.clientWidth || 320);
+    const hostHeight = Math.max(140, canvas.clientHeight || 170);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(hostWidth * dpr);
+    canvas.height = Math.floor(hostHeight * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, hostWidth, hostHeight);
+
+    const a = Array.isArray(grantedSeries) ? grantedSeries.slice(-getRangePoints()) : [];
+    const b = Array.isArray(deniedSeries) ? deniedSeries.slice(-getRangePoints()) : [];
+    const n = Math.max(a.length, b.length);
+    if (n <= 1) {
+      ctx.fillStyle = '#5c6f8b';
+      ctx.font = '12px Manrope, sans-serif';
+      ctx.fillText('Sin datos suficientes', 12, 24);
+      return;
+    }
+
+    const pad = { l: 34, r: 10, t: 12, b: 22 };
+    const w = hostWidth - pad.l - pad.r;
+    const h = hostHeight - pad.t - pad.b;
+
+    ctx.strokeStyle = '#dbe4f3';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i += 1) {
+      const y = pad.t + (h * i / 4);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + w, y);
+      ctx.stroke();
+      const val = 100 - (i * 25);
+      ctx.fillStyle = '#7285a3';
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillText(`${val}`, 4, y + 3);
+    }
+
+    function drawLine(series, color) {
+      const vals = series.map((v) => clampNum(v, 0, 100));
+      if (vals.length <= 1) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      vals.forEach((v, i) => {
+        const x = pad.l + (w * i / (vals.length - 1));
+        const y = pad.t + (h * (100 - v) / 100);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    drawLine(a, '#1ca774');
+    drawLine(b, '#cf2e4e');
+
+    ctx.fillStyle = '#7285a3';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillText('-t', pad.l, hostHeight - 6);
+    ctx.fillText('ahora', pad.l + w - 28, hostHeight - 6);
+  }
+
+  function stateClass(v) {
+    const n = Number(v || 0);
+    if (n < 60) return 'state-bad';
+    if (n < 80) return 'state-warn';
+    return 'state-ok';
+  }
+
+  function renderServiceBars(rows) {
+    const box = document.getElementById('serviceBars');
+    if (!box) return;
+    const items = Array.isArray(rows) ? rows : [];
+    if (!items.length) {
+      box.innerHTML = '<div class="small">Sin datos de red aún.</div>';
+      return;
+    }
+    const max = Math.max(...items.map(x => Number(x.lat_ms || 0)), 1);
+    box.innerHTML = items.map((x) => {
+      const lat = Number(x.lat_ms || 0);
+      const err = Number(x.error_pct || 0);
+      const width = Math.max(4, (lat / max) * 100);
+      return `
+        <div class="bar-row">
+          <div><code>${x.servicio}</code></div>
+          <div class="bar-track"><div class="bar-fill ${err > 10 ? 'bad' : ''}" style="width:${width}%"></div></div>
+          <div class="small">${lat.toFixed(1)} ms | err ${err.toFixed(1)}%</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderCameraCompare(rows) {
+    const box = document.getElementById('cameraCompare');
+    if (!box) return;
+    const map = {};
+    (rows || []).forEach(r => { map[r.perfil] = r; });
+    const poor = map.pobre || { total: 0, tasa_reconocimiento_pct: 0, ok: 0, den: 0 };
+    const good = map.buena || { total: 0, tasa_reconocimiento_pct: 0, ok: 0, den: 0 };
+    box.innerHTML = `
+      <div class="cam-box">
+        <div class="t">Camara Pobre</div>
+        <div class="v">${fmtPct(poor.tasa_reconocimiento_pct)}</div>
+        <div class="d">Eventos: ${poor.total} | OK: ${poor.ok} | DEN: ${poor.den}</div>
+      </div>
+      <div class="cam-box">
+        <div class="t">Camara Buena</div>
+        <div class="v">${fmtPct(good.tasa_reconocimiento_pct)}</div>
+        <div class="d">Eventos: ${good.total} | OK: ${good.ok} | DEN: ${good.den}</div>
+      </div>
+    `;
+  }
+
+  function clampNum(v, min, max) {
+    const n = Number(v);
+    if (!isFinite(n)) return min;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function setCpuGauge(percent) {
+    const gauge = document.getElementById('cpuGauge');
+    const label = document.getElementById('cpuLabel');
+    if (!gauge || !label) return;
+    const p = clampNum(percent, 0, 100);
+    const deg = (p / 100) * 360;
+    let color = '#2a5de0';
+    if (p >= 85) color = '#cf2e4e';
+    else if (p >= 70) color = '#c78512';
+    gauge.style.background = `conic-gradient(${color} 0deg, ${color} ${deg}deg, #e7edf9 ${deg}deg, #e7edf9 360deg)`;
+    label.textContent = `${Math.round(p)}%`;
+  }
+
+  function renderHardwareAlerts({ kpis, network, camera, metricsRows }) {
+    const box = document.getElementById('hwAlerts');
+    if (!box) return;
+    const alerts = [];
+
+    const pctDenied = Number(kpis?.pct_denegados || 0);
+    const pct2faFail = Number(kpis?.pct_2fa_fail || 0);
+    if (pctDenied >= 35) alerts.push({ lvl: 'err', txt: `Alerta critica: denegados en ${pctDenied.toFixed(1)}%` });
+    else if (pctDenied >= 20) alerts.push({ lvl: 'warn', txt: `Denegados elevados: ${pctDenied.toFixed(1)}%` });
+
+    if (pct2faFail >= 25) alerts.push({ lvl: 'err', txt: `Fallo 2FA alto: ${pct2faFail.toFixed(1)}%` });
+    else if (pct2faFail >= 10) alerts.push({ lvl: 'warn', txt: `Fallo 2FA moderado: ${pct2faFail.toFixed(1)}%` });
+
+    (network || []).forEach((n) => {
+      const svc = n.servicio || 'servicio';
+      const lat = Number(n.lat_ms || 0);
+      const err = Number(n.error_pct || 0);
+      const avail = Number(n.disponibilidad_pct || 0);
+      if (lat >= 350) alerts.push({ lvl: 'err', txt: `Latencia critica en ${svc}: ${lat.toFixed(1)} ms` });
+      else if (lat >= 180) alerts.push({ lvl: 'warn', txt: `Latencia alta en ${svc}: ${lat.toFixed(1)} ms` });
+      if (err >= 18) alerts.push({ lvl: 'err', txt: `Error alto en ${svc}: ${err.toFixed(1)}%` });
+      else if (err >= 8) alerts.push({ lvl: 'warn', txt: `Error moderado en ${svc}: ${err.toFixed(1)}%` });
+      if (avail > 0 && avail < 90) alerts.push({ lvl: 'err', txt: `Disponibilidad baja en ${svc}: ${avail.toFixed(1)}%` });
+      else if (avail > 0 && avail < 97) alerts.push({ lvl: 'warn', txt: `Disponibilidad inestable en ${svc}: ${avail.toFixed(1)}%` });
+    });
+
+    const poor = (camera || []).find((c) => c.perfil === 'pobre');
+    if (poor && Number(poor.total || 0) >= 5 && Number(poor.tasa_reconocimiento_pct || 0) < 65) {
+      alerts.push({
+        lvl: 'warn',
+        txt: `Camara pobre con baja deteccion: ${Number(poor.tasa_reconocimiento_pct || 0).toFixed(1)}%`,
+      });
+    }
+
+    const intrusoCount = (metricsRows || []).filter((m) => String(m.metrica || '') === 'intruso_detectado').length;
+    if (intrusoCount >= 3) alerts.push({ lvl: 'warn', txt: `Actividad de intrusos reciente: ${intrusoCount} eventos` });
+
+    const dedup = [];
+    const seen = new Set();
+    alerts.forEach((a) => {
+      const key = `${a.lvl}|${a.txt}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        dedup.push(a);
+      }
+    });
+
+    if (!dedup.length) {
+      box.innerHTML = '<div class="alert-item ok"><b>OK:</b> Sin alertas activas en ventana actual.</div>';
+      return;
+    }
+
+    box.innerHTML = dedup.slice(0, 6).map((a) => {
+      const prefix = a.lvl === 'err' ? 'FALLA' : 'ALERTA';
+      return `<div class="alert-item ${a.lvl}"><b>${prefix}:</b> ${a.txt}</div>`;
+    }).join('');
+  }
+
+  function metricMatchesFilters(item) {
+    const fm = (document.getElementById('liveFilterMetrica')?.value || '').trim().toLowerCase();
+    const fs = (document.getElementById('liveFilterServicio')?.value || '').trim().toLowerCase();
+    const fp = (document.getElementById('liveFilterPerfil')?.value || '').trim().toLowerCase();
+    const metrica = String(item.metrica || '').toLowerCase();
+    const et = item.etiquetas || {};
+    const service = String(et.servicio || '').toLowerCase();
+    const perfil = String(et.perfil || '').toLowerCase();
+    if (fm && !metrica.includes(fm)) return false;
+    if (fs && !service.includes(fs)) return false;
+    if (fp && !perfil.includes(fp)) return false;
+    return true;
+  }
+
+  async function refreshLiveMetrics() {
+    const body = document.getElementById('liveMetricsBody');
+    try {
+      const [live, metrics] = await Promise.all([
+        api('/api/metricas/live'),
+        api(`/api/metricas/${(document.getElementById('liveSource')?.value || 'raw')}?limit=250`)
+      ]);
+
+      const cache = live.cache || {};
+      const k = cache.kpis || {};
+      const net = cache.network || [];
+      const cam = cache.camera || [];
+      document.getElementById('lkGranted').textContent = fmtPct(k.pct_concedidos);
+      document.getElementById('lkDenied').textContent = fmtPct(k.pct_denegados);
+      const avgLatency = net.length ? (net.reduce((a, b) => a + Number(b.lat_ms || 0), 0) / net.length) : 0;
+      document.getElementById('lkLatency').textContent = `${avgLatency.toFixed(1)} ms`;
+      const rawHealth = 100 - (Number(k.pct_denegados || 0) * 0.6 + Number(k.pct_2fa_fail || 0) * 0.4);
+      const healthPct = Math.max(0, Math.min(100, rawHealth));
+      const c = stateClass(healthPct);
+      document.getElementById('lkState').innerHTML = `<span class="state-dot ${c}"></span>${healthPct.toFixed(0)}%`;
+      document.getElementById('liveGeneratedAt').textContent = `Actualizado: ${cache.generated_at || '--'}`;
+
+      const hist = live.history || {};
+      drawTrafficChart(hist.pct_concedidos || [], hist.pct_denegados || []);
+      renderSpark('spark2faFail', hist.pct_2fa_fail || []);
+      renderServiceBars(net);
+      renderCameraCompare(cam);
+
+      const avgErr = net.length ? (net.reduce((a, b) => a + Number(b.error_pct || 0), 0) / net.length) : 0;
+      const poorCam = (cam || []).find((x) => x.perfil === 'pobre');
+      const poorPenalty = poorCam ? (100 - Number(poorCam.tasa_reconocimiento_pct || 100)) : 0;
+      const netLoad = clampNum(avgLatency / 2.2, 0, 100);
+      const errLoad = clampNum(avgErr * 2.5, 0, 100);
+      const deniedLoad = clampNum(Number(k.pct_denegados || 0) * 1.1, 0, 100);
+      const twofaLoad = clampNum(Number(k.pct_2fa_fail || 0) * 1.3, 0, 100);
+      const cpuEstimate = clampNum(
+        12 + (netLoad * 0.35) + (errLoad * 0.2) + (deniedLoad * 0.2) + (twofaLoad * 0.15) + (poorPenalty * 0.1),
+        5,
+        96
+      );
+      setCpuGauge(cpuEstimate);
+
+      const rows = (metrics.items || []).filter(metricMatchesFilters);
+      renderHardwareAlerts({ kpis: k, network: net, camera: cam, metricsRows: rows });
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5">Sin datos para los filtros actuales</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.slice(0, 150).map(r => {
+        const et = r.etiquetas ? JSON.stringify(r.etiquetas) : '{}';
+        return `<tr>
+          <td>${r.ts || '-'}</td>
+          <td><code>${r.metrica || '-'}</code></td>
+          <td>${r.valor == null ? '-' : r.valor}</td>
+          <td>${r.unidad || '-'}</td>
+          <td><code style="font-size:11px;">${et}</code></td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      body.innerHTML = `<tr><td colspan="5" class="errtxt">${e.message}</td></tr>`;
+      document.getElementById('liveGeneratedAt').textContent = 'Error al actualizar';
+    }
+  }
+
+  function valueBool(id) { return document.getElementById(id).value === 'true'; }
+
+  async function enrollOne() {
+    try {
+      const username = document.getElementById('fUsername').value.trim();
+      if (!username) throw new Error('Username requerido');
+      await api('/api/admin/users_security/enroll', {
+        method:'POST',
+        body: JSON.stringify({
+          username,
+          role: document.getElementById('fRole').value,
+          requires_2fa: valueBool('f2fa'),
+          active: valueBool('fActive')
+        })
+      });
+      setMsg('singleMsg', `Usuario ${username} guardado`, true);
+      await loadUsers();
+    } catch (e) { setMsg('singleMsg', e.message); }
+  }
+
+  async function rotate2FA(username) {
+    try {
+      await api(`/api/admin/users_security/${encodeURIComponent(username)}/rotate_2fa`, { method:'POST', body:'{}' });
+      setMsg('singleMsg', `2FA rotado para ${username}`, true);
+      showQr(username);
+      await loadUsers();
+      if (selectedUser === username) await loadProfile(username);
+    } catch (e) { setMsg('singleMsg', e.message); }
+  }
+
+  async function setActive(username, active) {
+    try {
+      await api(`/api/admin/users_security/${encodeURIComponent(username)}/active`, {
+        method:'POST', body: JSON.stringify({ active })
+      });
+      await loadUsers();
+      if (selectedUser === username) await loadProfile(username);
+    } catch (e) { setMsg('singleMsg', e.message); }
+  }
+
+  async function setRole(username, role) {
+    try {
+      await api(`/api/admin/users_security/${encodeURIComponent(username)}/role`, {
+        method:'POST', body: JSON.stringify({ role })
+      });
+      await loadUsers();
+      if (selectedUser === username) await loadProfile(username);
+    } catch (e) { setMsg('singleMsg', e.message); }
+  }
+
+  async function deleteUser(username) {
+    if (!confirm(`Eliminar ${username}?`)) return;
+    try {
+      await api(`/api/admin/users_security/${encodeURIComponent(username)}`, { method:'DELETE' });
+      await loadUsers();
+      if (selectedUser === username) {
+        selectedUser = '';
+        backToUsersList();
+      }
+    } catch (e) { setMsg('singleMsg', e.message); }
+  }
+
+  function renderKpis(items) {
+    const total = items.length;
+    const active = items.filter(u => !!u.active).length;
+    const twofa = items.filter(u => !!u.requires_2fa).length;
+    const admins = items.filter(u => (u.role || '') === 'admin').length;
+    document.getElementById('kpiTotal').textContent = total;
+    document.getElementById('kpiActive').textContent = active;
+    document.getElementById('kpi2fa').textContent = twofa;
+    document.getElementById('kpiAdmins').textContent = admins;
+  }
+
+  async function loadUsers() {
+    const tb = document.querySelector('#usersTable tbody');
+    const usersMsg = document.getElementById('usersMsg');
+    tb.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+    if (usersMsg) usersMsg.textContent = '';
+    try {
+      if (!TOKEN) throw new Error('Falta token admin: colócalo arriba y pulsa "Guardar Token"');
+      const data = await api('/api/admin/users_security');
+      const items = data.items || [];
+      renderKpis(items);
+      if (usersMsg) usersMsg.textContent = `Usuarios de seguridad: ${items.length}`;
+      if (!items.length) {
+        const faces = await api('/api/users');
+        const users = faces.users || [];
+        if (usersMsg) usersMsg.textContent = `Seguridad vacía. Mostrando rostros cargados: ${users.length}`;
+        if (!users.length) {
+          tb.innerHTML = '<tr><td colspan="6">Sin usuarios</td></tr>';
+          return;
+        }
+        tb.innerHTML = '';
+        users.forEach((name) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><b>${name}</b></td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td><code>Solo rostro cargado</code></td>
+            <td><div class="actions"><button class="secondary" data-prof="${name}">Perfil</button></div></td>
+          `;
+          tb.appendChild(tr);
+        });
+        tb.querySelectorAll('button[data-prof]').forEach(el => el.onclick = () => loadProfile(el.dataset.prof));
+        return;
+      }
+      tb.innerHTML = '';
+      for (const u of items) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${u.username}</b></td>
+          <td>
+            <select data-role="${u.username}">
+              <option ${u.role==='admin'?'selected':''}>admin</option>
+              <option ${u.role==='seguridad'?'selected':''}>seguridad</option>
+              <option ${u.role==='empleado'?'selected':''}>empleado</option>
+              <option ${u.role==='visita'?'selected':''}>visita</option>
+            </select>
+          </td>
+          <td><span class="tag">${u.active ? 'true':'false'}</span></td>
+          <td><span class="tag">${u.requires_2fa ? 'true':'false'}</span></td>
+          <td><code>${u.totp_secret_masked || ''}</code></td>
+          <td>
+            <div class="actions">
+              <button class="secondary" data-prof="${u.username}">Perfil</button>
+              <button data-qr="${u.username}">QR</button>
+              <button class="warn" data-rot="${u.username}">Rotar 2FA</button>
+              <button class="secondary" data-tgl="${u.username}" data-active="${u.active ? '1':'0'}">${u.active ? 'Desactivar':'Activar'}</button>
+              <button class="err" data-del="${u.username}">Eliminar</button>
+            </div>
+          </td>
+        `;
+        tb.appendChild(tr);
+      }
+
+      tb.querySelectorAll('select[data-role]').forEach(el => {
+        el.addEventListener('change', () => setRole(el.dataset.role, el.value));
+      });
+      tb.querySelectorAll('button[data-prof]').forEach(el => el.onclick = () => loadProfile(el.dataset.prof));
+      tb.querySelectorAll('button[data-qr]').forEach(el => el.onclick = () => showQr(el.dataset.qr));
+      tb.querySelectorAll('button[data-rot]').forEach(el => el.onclick = () => rotate2FA(el.dataset.rot));
+      tb.querySelectorAll('button[data-tgl]').forEach(el => el.onclick = () => setActive(el.dataset.tgl, !(el.dataset.active === '1')));
+      tb.querySelectorAll('button[data-del]').forEach(el => el.onclick = () => deleteUser(el.dataset.del));
+    } catch (e) {
+      try {
+        const faces = await api('/api/users');
+        const users = faces.users || [];
+        renderKpis([]);
+        if (usersMsg) usersMsg.textContent = `Mostrando fallback (rostros): ${users.length}`;
+        if (!users.length) {
+          tb.innerHTML = `<tr><td colspan="6" class="errtxt">${e.message}</td></tr>`;
+          return;
+        }
+        tb.innerHTML = '';
+        users.forEach((name) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><b>${name}</b></td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td><code>Solo rostro cargado</code></td>
+            <td><div class="actions"><button class="secondary" data-prof="${name}">Perfil</button></div></td>
+          `;
+          tb.appendChild(tr);
+        });
+        tb.querySelectorAll('button[data-prof]').forEach(el => el.onclick = () => loadProfile(el.dataset.prof));
+      } catch (_) {
+        tb.innerHTML = `<tr><td colspan="6" class="errtxt">${e.message}</td></tr>`;
+      }
+    }
+  }
+
+  async function loadProfile(username) {
+    selectedUser = username;
+    openUserDetail();
+    const box = document.getElementById('profileBox');
+    box.innerHTML = '<div class="small">Cargando perfil...</div>';
+    try {
+      const data = await api(`/api/admin/users_security/${encodeURIComponent(username)}/activity?limit=20`);
+      if (!data.ok) throw new Error(data.error || 'No se pudo cargar perfil');
+      const p = data.profile || {};
+      const s = data.stats || {};
+      const logs = data.recent_logs || [];
+      const photo = data.photo_url || '';
+
+      const rows = logs.map(x => `
+        <tr>
+          <td>${x.fecha_hora || ''}</td>
+          <td>${x.evento || ''}</td>
+          <td>${x.distancia == null ? '-' : Number(x.distancia).toFixed(4)}</td>
+        </tr>`).join('');
+
+      box.innerHTML = `
+        <div class="detail-top">
+          <img class="profile-photo" src="${photo}?ts=${Date.now()}" onerror="this.src='data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"110\" height=\"110\"><rect width=\"110\" height=\"110\" fill=\"#f1f5f9\"/><text x=\"55\" y=\"58\" text-anchor=\"middle\" fill=\"#64748b\" font-size=\"11\">SIN FOTO</text></svg>')}';" />
+          <div>
+            <div style="font-size:22px;font-weight:800;">${p.username || username}</div>
+            <div class="small">Rol: <b>${p.role || '-'}</b> | Activo: <b>${String(!!p.active)}</b> | 2FA: <b>${String(!!p.requires_2fa)}</b></div>
+            <div class="small" style="margin-top:4px;">Ultimo evento: <b>${s.ultimo_evento || 'Sin registros'}</b></div>
+          </div>
+        </div>
+
+        <div class="stats" style="margin-top:10px;">
+          <div class="stat"><div class="lbl">Total eventos</div><div class="val">${s.total_eventos || 0}</div></div>
+          <div class="stat"><div class="lbl">Concedidos</div><div class="val">${s.concedidos || 0}</div></div>
+          <div class="stat"><div class="lbl">Denegados</div><div class="val">${s.denegados || 0}</div></div>
+          <div class="stat"><div class="lbl">Hoy concedidos</div><div class="val">${s.hoy_concedidos || 0}</div></div>
+          <div class="stat"><div class="lbl">Hoy denegados</div><div class="val">${s.hoy_denegados || 0}</div></div>
+          <div class="stat"><div class="lbl">Usuario</div><div class="val" style="font-size:14px">${p.username || username}</div></div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="small" style="margin-bottom:6px">Ultimos accesos</div>
+          <div class="timeline table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Evento</th><th>Distancia</th></tr></thead>
+              <tbody>${rows || '<tr><td colspan="3">Sin actividad</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    } catch (e) {
+      box.innerHTML = `<div class="errtxt">${e.message}</div>`;
+    }
+  }
+
+  function showQrFromForm() {
+    const u = document.getElementById('fUsername').value.trim();
+    if (!u) return setMsg('singleMsg', 'Username requerido');
+    showQr(u);
+  }
+
+  function rotate2FAFromForm() {
+    const u = document.getElementById('fUsername').value.trim();
+    if (!u) return setMsg('singleMsg', 'Username requerido');
+    rotate2FA(u);
+  }
+
+  function deleteFromForm() {
+    const u = document.getElementById('fUsername').value.trim();
+    if (!u) return setMsg('singleMsg', 'Username requerido');
+    deleteUser(u);
+  }
+
+  function showQr(username) {
+    if (!TOKEN) return setMsg('singleMsg', 'Primero guarda token admin');
+    const url = `/api/2fa/qr?token=${encodeURIComponent(TOKEN)}&username=${encodeURIComponent(username)}&ts=${Date.now()}`;
+    document.getElementById('qrUser').textContent = `Usuario: ${username}`;
+    document.getElementById('qrImg').src = url;
+    document.getElementById('qrModal').style.display = 'flex';
+  }
+
+  function hideQr() {
+    document.getElementById('qrModal').style.display = 'none';
+  }
+
+  function parseCsv(text) {
+    const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if (!lines.length) return [];
+    const rows = [];
+    for (let i=0;i<lines.length;i++) {
+      const parts = lines[i].split(',').map(x=>x.trim());
+      if (i===0 && parts[0] === 'username') continue;
+      if (!parts[0] || parts[0].startsWith('#')) continue;
+      rows.push({
+        username: parts[0],
+        role: (parts[1] || 'empleado').toLowerCase(),
+        requires_2fa: (parts[2] || 'true').toLowerCase() === 'true',
+        active: (parts[3] || 'true').toLowerCase() === 'true'
+      });
+    }
+    return rows;
+  }
+
+  async function previewCsv() {
+    const file = document.getElementById('csvFile').files[0];
+    if (!file) return setMsg('bulkMsg', 'Selecciona un CSV');
+    const text = await file.text();
+    parsedCsvRows = parseCsv(text);
+    document.getElementById('csvPreview').textContent = JSON.stringify(parsedCsvRows, null, 2);
+    setMsg('bulkMsg', `Filas validas: ${parsedCsvRows.length}`, true);
+  }
+
+  async function importCsv() {
+    try {
+      if (!TOKEN) throw new Error('Guarda token admin primero');
+      if (!parsedCsvRows.length) throw new Error('Primero previsualiza CSV');
+      let ok = 0, err = 0;
+      for (const row of parsedCsvRows) {
+        try {
+          await api('/api/admin/users_security/enroll', { method:'POST', body: JSON.stringify(row) });
+          await api(`/api/admin/users_security/${encodeURIComponent(row.username)}/active`, {
+            method:'POST', body: JSON.stringify({active: row.active})
+          });
+          ok++;
+        } catch (_) {
+          err++;
+        }
+      }
+      setMsg('bulkMsg', `Importacion completa. OK=${ok} ERROR=${err}`, err===0);
+      await loadUsers();
+    } catch (e) { setMsg('bulkMsg', e.message); }
+  }
+
+  function downloadRaw() { window.location.href = '/api/metricas/raw.csv?limit=10000'; }
+  function downloadClean() { window.location.href = '/api/metricas/clean.csv?limit=10000'; }
+
+  function downloadFile(url, filename) {
+    if (url.endsWith('.csv')) {
+      window.location.href = url;
+      return;
+    }
+    downloadJsonFile(url, filename);
+  }
+
+  function renderExportFiles() {
+    const body = document.getElementById('metricsByNameBody');
+    const msg = document.getElementById('metricsMsg');
+    if (!body) return;
+    const files = [
+      { file: 'metricas_raw.csv', source: '/api/metricas/raw.csv?limit=10000', type: 'CSV' },
+      { file: 'metricas_clean.csv', source: '/api/metricas/clean.csv?limit=10000', type: 'CSV' },
+      { file: 'metricas_raw.json', source: '/api/metricas/raw?limit=10000', type: 'JSON' },
+      { file: 'metricas_clean.json', source: '/api/metricas/clean?limit=10000', type: 'JSON' },
+      { file: 'metricas_resumen.json', source: '/api/metricas/resumen', type: 'JSON' },
+      { file: 'reportes.json', source: '/api/reportes', type: 'JSON' },
+      { file: 'intrusos_lista.json', source: '/api/intrusos', type: 'JSON' },
+    ];
+    if (msg) msg.textContent = `Archivos disponibles: ${files.length}`;
+    body.innerHTML = '';
+    files.forEach((f) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${f.file}</code></td>
+        <td><code>${f.source}</code></td>
+        <td><button class="secondary" data-url="${f.source}" data-name="${f.file}">Descargar ${f.type}</button></td>
+      `;
+      body.appendChild(tr);
+    });
+    body.querySelectorAll('button[data-url]').forEach((b) => {
+      b.onclick = () => downloadFile(b.dataset.url, b.dataset.name);
+    });
+  }
+
+  async function downloadJsonFile(url, filename) {
+    try {
+      const data = await api(url);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      setMsg('singleMsg', e.message || 'No se pudo descargar JSON');
+    }
+  }
+
+  async function loadIntrusos() {
+    const grid = document.getElementById('intrusosGrid');
+    const counter = document.getElementById('intrusosCount');
+    if (!grid || !counter) return;
+    grid.innerHTML = '<div class=\"small\">Cargando...</div>';
+    try {
+      const data = await api('/api/intrusos');
+      const files = data.files || [];
+      counter.textContent = `${files.length} archivos`;
+      if (!files.length) {
+        grid.innerHTML = '<div class=\"small\">Sin evidencias por ahora.</div>';
+        return;
+      }
+      grid.innerHTML = '';
+      files.forEach((name) => {
+        const card = document.createElement('div');
+        card.style.border = '1px solid var(--line)';
+        card.style.borderRadius = '10px';
+        card.style.background = '#fff';
+        card.style.padding = '8px';
+        card.innerHTML = `
+          <a href=\"/api/intrusos/${encodeURIComponent(name)}\" target=\"_blank\" style=\"text-decoration:none;color:inherit;\">
+            <img src=\"/api/intrusos/${encodeURIComponent(name)}\" alt=\"${name}\" style=\"width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid var(--line);\" />
+            <div class=\"small\" style=\"margin-top:6px;word-break:break-all;\">${name}</div>
+          </a>
+        `;
+        grid.appendChild(card);
+      });
+    } catch (e) {
+      grid.innerHTML = `<div class=\"errtxt\">${e.message}</div>`;
+      counter.textContent = 'Error';
+    }
+  }
+
+  async function refreshAll() {
+    await loadUsers();
+  }
+
+  function bindNav() {
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.dataset.section;
+        if (!section) return;
+        switchSection(section);
+        if (section === 'usuarios') openUsersList();
+        if (section === 'intrusos') loadIntrusos();
+        if (section === 'metricas-live') {
+          refreshLiveMetrics();
+          startLivePolling();
+        } else {
+          stopLivePolling();
+        }
+      });
+    });
+  }
+
+  (function init(){
+    bindNav();
+    const li = document.getElementById('liveInterval');
+    if (li) li.addEventListener('change', () => startLivePolling());
+    const src = document.getElementById('liveSource');
+    if (src) src.addEventListener('change', () => refreshLiveMetrics());
+    document.getElementById('adminToken').value = TOKEN;
+    document.getElementById('tokenState').textContent = TOKEN ? 'Token cargado' : 'Token no cargado';
+    refreshAll();
+    loadIntrusos();
+    renderExportFiles();
+    stopLivePolling();
+  })();
+
+  window.addEventListener('resize', () => {
+    const sec = document.getElementById('section-metricas-live');
+    if (sec && sec.classList.contains('active')) {
+      refreshLiveMetrics();
+    }
+  });
+</script>
+</body>
+</html>

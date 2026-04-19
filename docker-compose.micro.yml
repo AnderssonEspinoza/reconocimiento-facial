@@ -1,0 +1,209 @@
+services:
+  postgres-ms:
+    image: postgres:16-alpine
+    container_name: postgres-ms-pdp
+    environment:
+      POSTGRES_DB: faceaccess
+      POSTGRES_USER: faceaccess
+      POSTGRES_PASSWORD: faceaccess
+      TZ: America/Lima
+      PGTZ: America/Lima
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_ms_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faceaccess -d faceaccess"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  device-ms:
+    build:
+      context: ./services/device
+      dockerfile: Dockerfile
+    container_name: device-ms-pdp
+    environment:
+      ARDUINO_PORT: "${ARDUINO_PORT:-}"
+      SERIAL_BAUDRATE: "9600"
+      TZ: America/Lima
+    privileged: true
+    volumes:
+      - /dev:/dev
+    restart: unless-stopped
+
+  recognition-service:
+    build:
+      context: ./services/micro/recognition
+      dockerfile: Dockerfile
+    container_name: recognition-service-pdp
+    ports:
+      - "8101:8101"
+    environment:
+      DATA_DIR: "/app/data"
+      FOTO_REFERENCIA_PATH: "/app/data/foto_referencia.png"
+      CAMERA_INDEX: "0"
+      FRAME_SCALE: "0.22"
+      PROCESS_EVERY_N_FRAMES: "2"
+      MATCH_THRESHOLD: "0.50"
+      FRAMES_CONSECUTIVOS_REQUERIDOS: "10"
+      CAMERA_WIDTH: "960"
+      CAMERA_HEIGHT: "540"
+      JPEG_QUALITY: "75"
+    privileged: true
+    volumes:
+      - ./data:/app/data
+      - /dev:/dev
+    depends_on:
+      device-ms:
+        condition: service_started
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ./services/micro/auth
+      dockerfile: Dockerfile
+    container_name: auth-service-pdp
+    ports:
+      - "8102:8102"
+    environment:
+      DB_URL: "postgresql://faceaccess:faceaccess@postgres-ms:5432/faceaccess"
+      TWO_FA_ADMIN_TOKEN: "${TWO_FA_ADMIN_TOKEN:-PDP_2026_3k9!Zx#91Q}"
+      TOTP_ISSUER: "PROYECTO_PDP"
+    depends_on:
+      postgres-ms:
+        condition: service_healthy
+    restart: unless-stopped
+
+  access-service:
+    build:
+      context: ./services/micro/access
+      dockerfile: Dockerfile
+    container_name: access-service-pdp
+    ports:
+      - "8103:8103"
+    environment:
+      RECOGNITION_URL: "http://recognition-service:8101"
+      AUTH_URL: "http://auth-service:8102"
+      DEVICE_SERVICE_URL: "http://device-ms:8001"
+      DB_URL: "postgresql://faceaccess:faceaccess@postgres-ms:5432/faceaccess"
+      N8N_WEBHOOK_URL: "${N8N_WEBHOOK_URL:-}"
+      PLEX_URL: "http://host.docker.internal:8097/web/index.html#/dashboard"
+      INTRUSOS_DIR: "/app/intrusos"
+      RUTA_LOG: "/app/registro_accesos.csv"
+      TWO_FA_GRACE_SECONDS: "60"
+      TWO_FA_TRUST_SECONDS: "120"
+      SEGUNDOS_INTRUSO: "3"
+      COOLDOWN_CAPTURA_INTRUSO: "5"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./intrusos:/app/intrusos
+      - ./registro_accesos.csv:/app/registro_accesos.csv
+    depends_on:
+      postgres-ms:
+        condition: service_healthy
+      recognition-service:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      device-ms:
+        condition: service_started
+    restart: unless-stopped
+
+  gateway-service:
+    build:
+      context: ./services/micro/gateway
+      dockerfile: Dockerfile
+    container_name: gateway-service-pdp
+    ports:
+      - "8002:8000"
+    environment:
+      ACCESS_URL: "http://access-service:8103"
+      RECOGNITION_URL: "http://recognition-service:8101"
+      ANALYTICS_URL: "http://analytics-service:8104"
+      UI_FILE: "/app/faceaccess.html"
+      ADMIN_UI_FILE: "/app/admin.html"
+    volumes:
+      - ./services/micro/gateway/faceaccess.html:/app/faceaccess.html:ro
+      - ./services/micro/gateway/admin.html:/app/admin.html:ro
+    depends_on:
+      access-service:
+        condition: service_started
+      recognition-service:
+        condition: service_started
+      analytics-service:
+        condition: service_started
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: ./services/micro/analytics
+      dockerfile: Dockerfile
+    container_name: analytics-service-pdp
+    ports:
+      - "8104:8104"
+    environment:
+      ACCESS_API_URL: "http://access-service:8103/api"
+      ANALYTICS_DEFAULT_LIMIT: "2500"
+      ANALYTICS_MAX_LIMIT: "10000"
+      REQUEST_TIMEOUT: "8"
+    depends_on:
+      access-service:
+        condition: service_started
+    restart: unless-stopped
+
+  prometheus-lite:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus-lite-pdp
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=24h"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-lite.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_lite_data:/prometheus
+    depends_on:
+      access-service:
+        condition: service_started
+    restart: unless-stopped
+
+  grafana-lite:
+    image: grafana/grafana:11.2.0
+    container_name: grafana-lite-pdp
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_lite_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus-lite:
+        condition: service_started
+    restart: unless-stopped
+
+  cloudflared-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel-pdp
+    command: tunnel --no-autoupdate --url http://gateway-service:8000
+    depends_on:
+      gateway-service:
+        condition: service_started
+    profiles:
+      - tunnel
+    restart: unless-stopped
+
+volumes:
+  postgres_ms_data:
+  prometheus_lite_data:
+  grafana_lite_data:

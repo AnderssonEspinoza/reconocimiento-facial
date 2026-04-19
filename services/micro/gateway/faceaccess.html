@@ -187,7 +187,7 @@
   .cam-metric strong { color: var(--text-main); font-weight: 800;}
 
   /* --- CONTROL PANEL --- */
-  .controls-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border-solid); padding: 1px; }
+  .controls-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--border-solid); padding: 1px; }
   .cmd-btn {
     padding: 20px 16px; background: #fff; border: none;
     color: var(--text-main); font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.05em; font-weight: 700;
@@ -347,6 +347,10 @@
           <button class="cmd-btn" id="btn-scan" onclick="startScan()">
             <span class="cmd-marker">// CMD_01</span>
             INICIAR ESCANEO
+          </button>
+          <button class="cmd-btn" id="btn-camera" onclick="toggleCamera()">
+            <span class="cmd-marker">// CMD_00</span>
+            CAMARA: ACTIVA
           </button>
           <button class="cmd-btn" id="btn-mesh" onclick="toggleMesh()">
             <span class="cmd-marker">// CMD_02</span>
@@ -651,8 +655,18 @@
     bar.style.width = '0%'; val.textContent = '0.00%';
   }
 
-  async function startScan() { await api('/api/start_scan', { method: 'POST' }); refreshStatus(); }
+  async function startScan() {
+    await api('/api/camera', { method: 'POST', body: JSON.stringify({ enabled: true }) });
+    await api('/api/start_scan', { method: 'POST' });
+    refreshStatus();
+  }
   async function resetSystem() { await api('/api/reset', { method: 'POST' }); refreshStatus(); }
+  async function toggleCamera() {
+    const current = !!(state.status && state.status.camera_enabled);
+    const next = !current;
+    await api('/api/camera', { method: 'POST', body: JSON.stringify({ enabled: next }) });
+    refreshStatus();
+  }
   async function toggleMesh() {
     const next = !(state.status && state.status.mesh_enabled);
     await api('/api/mesh', { method: 'POST', body: JSON.stringify({ enabled: next }) });
@@ -670,9 +684,9 @@
       window._mockLogs.unshift({
         time: new Date().toTimeString().slice(0,8),
         type: 'warn',
-        msg: 'RECARGA_SEGURA: reinicia face-service para aplicar nuevas fotos',
+        msg: 'RECARGA_SEGURA: usa recargar base o reinicia recognition-service',
       });
-      alert('Para aplicar nuevas fotos sin errores, ejecuta en terminal: docker compose restart face-service');
+      alert('Para aplicar nuevas fotos sin errores, ejecuta en terminal: docker compose -f docker-compose.micro.yml restart recognition-service');
     } else {
       const enc = res.encodings ?? 0;
       const ids = res.identidades ?? 0;
@@ -750,6 +764,12 @@
     const btnMesh = document.getElementById('btn-mesh');
     btnMesh.classList.toggle('active', !!status.mesh_enabled);
     btnMesh.innerHTML = `<span class="cmd-marker">// CMD_02</span> MALLA FACIAL: ${status.mesh_enabled ? 'ACTIVA' : 'INACTIVA'}`;
+    const btnCamera = document.getElementById('btn-camera');
+    if (btnCamera) {
+      const camOn = status.camera_enabled !== false;
+      btnCamera.classList.toggle('active', camOn);
+      btnCamera.innerHTML = `<span class="cmd-marker">// CMD_00</span> CAMARA: ${camOn ? 'ACTIVA' : 'APAGADA'}`;
+    }
     document.getElementById('btn-scan').disabled = !!status.scan_active;
     if (status.security_locked) {
       document.getElementById('cam-tag').textContent = `BLOQUEADO_${status.security_lock_remaining || 0}s`;

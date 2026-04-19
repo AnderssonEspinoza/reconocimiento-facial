@@ -4,7 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-API_BASE="${API_BASE:-http://localhost:8000}"
+# Compat:
+# - API_BASE (historico)
+# - API_URL  (nuevo nombre mas intuitivo)
+API_BASE="${API_BASE:-${API_URL:-http://localhost:8002}}"
 CSV_FILE="${1:-$ROOT_DIR/docs/usuarios_empresa_ejemplo.csv}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
@@ -12,6 +15,7 @@ if [[ -z "$ADMIN_TOKEN" ]]; then
   echo "ERROR: falta ADMIN_TOKEN." >&2
   echo "Ejemplo:" >&2
   echo "  ADMIN_TOKEN='TU_TOKEN' ./scripts/bootstrap_empresa.sh" >&2
+  echo "  API_URL='http://localhost:8002' ADMIN_TOKEN='TU_TOKEN' ./scripts/bootstrap_empresa.sh" >&2
   exit 1
 fi
 
@@ -25,6 +29,7 @@ curl -fsS "$API_BASE/api/status" >/dev/null
 
 echo "[2/4] Cargando usuarios desde: $CSV_FILE"
 echo "Formato esperado: username,role,requires_2fa,active"
+echo "Base URL objetivo: $API_BASE"
 
 ok_count=0
 err_count=0
@@ -88,4 +93,6 @@ curl -fsS "$API_BASE/api/admin/users_security" \
 echo "[4/4] Resumen"
 echo "  OK: $ok_count"
 echo "  ERROR: $err_count"
+echo "Tip QR (reemplaza USUARIO):"
+echo "  $API_BASE/api/2fa/qr?token=<ADMIN_TOKEN_URL_ENCODED>&username=USUARIO"
 echo "Listo."

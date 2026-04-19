@@ -30,3 +30,8 @@ data/totp_secret.txt
 
 # Docker local state
 *.log
+
+# Local docs kept outside repo publication
+DOCUMENTACION_TECNICA.md
+GUIA_TUNELES.md
+DOCUMENTACION_ANALYTICS_SERVICE.md
