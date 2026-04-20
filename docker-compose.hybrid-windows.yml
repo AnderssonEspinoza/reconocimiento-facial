@@ -1,0 +1,10 @@
+services:
+  # Modo híbrido Windows:
+  # gateway/access apuntan al recognition local (host) en 8101.
+  access-service:
+    environment:
+      RECOGNITION_URL: "http://host.docker.internal:8101"
+
+  gateway-service:
+    environment:
+      RECOGNITION_URL: "http://host.docker.internal:8101"

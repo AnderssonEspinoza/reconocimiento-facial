@@ -45,6 +45,37 @@ Nota importante sobre cámara en Windows:
 - Si pasa eso, API/admin/métricas sí levantan, pero el stream de cámara puede no abrir.
 - Para demos con cámara estable, Linux es la opción recomendada.
 
+## Modo híbrido Windows (recomendado si falla la cámara en Docker)
+En este modo:
+- Todo el stack corre en Docker.
+- Solo `recognition-service` corre local en Windows para usar la cámara directamente.
+
+Archivo de override:
+- `docker-compose.hybrid-windows.yml`
+
+Comando recomendado (PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_hybrid_windows.ps1
+```
+
+Esto hace:
+1. Levanta Docker con override híbrido.
+2. Crea/activa un venv local para recognition.
+3. Instala dependencias de `services/micro/recognition/requirements.txt`.
+4. Ejecuta `recognition-service` local en `http://localhost:8101`.
+5. Mantiene app/admin funcionando en `http://localhost:8002`.
+
+## Troubleshooting cámara en Windows
+Si la cámara sale en negro o da `Camera index out of range`:
+
+1. Cierra apps que usan cámara (Teams, Zoom, navegador con webcam abierta).
+2. Prueba modo híbrido (`run_hybrid_windows.ps1`).
+3. Si sigue fallando, cambia índice de cámara local:
+   - Edita `services/micro/recognition/app.py` o define `CAMERA_INDEX` en entorno local.
+4. Verifica permisos de cámara en Windows:
+   - Configuración -> Privacidad y seguridad -> Cámara.
+5. Reinicia el servicio local de reconocimiento y vuelve a abrir `http://localhost:8002`.
+
 ## URLs principales
 - App: `http://localhost:8002`
 - Admin: `http://localhost:8002/admin`
